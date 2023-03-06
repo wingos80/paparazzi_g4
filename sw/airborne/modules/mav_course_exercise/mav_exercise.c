@@ -33,11 +33,14 @@
 uint8_t increase_nav_heading(float incrementDegrees);
 uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
+void turn20deg(void);
+
 
 enum navigation_state_t {
   SAFE,
   OBSTACLE_FOUND,
   OUT_OF_BOUNDS,
+  SEARCH_FOR_SAFE_HEADING,
   HOLD
 };
 
@@ -46,6 +49,8 @@ float oa_color_count_frac = 0.18f;
 enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
+float heading_increment = 90.f;          // heading angle increment [deg]
+float new_new_heading = 0.f;          // heading angle increment [deg]
 float moveDistance = 2;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
@@ -108,7 +113,16 @@ void mav_exercise_periodic(void) {
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
 
-      navigation_state = HOLD;
+      navigation_state = SEARCH_FOR_SAFE_HEADING;
+      break;
+    case SEARCH_FOR_SAFE_HEADING:
+      turn20deg();
+      increase_nav_heading(new_new_heading);
+
+      // make sure we have a couple of good readings before declaring the way safe
+      if (obstacle_free_confidence >= 2){
+        navigation_state = SAFE;
+      }
       break;
     case OUT_OF_BOUNDS:
       // stop
@@ -173,4 +187,12 @@ uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters) {
   calculateForwards(&new_coor, distanceMeters);
   moveWaypoint(waypoint, &new_coor);
   return false;
+}
+
+void turn20deg(void) {
+  if (rand()%2 == 0){
+    new_new_heading = -heading_increment;
+  } else {
+    new_new_heading = heading_increment;
+  }
 }
