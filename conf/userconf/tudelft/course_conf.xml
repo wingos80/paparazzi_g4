@@ -22,7 +22,7 @@
    gui_color="white"
   />
   <aircraft
-   name="bebop_orange_avoid_better"
+   name="bebop_mav_course_exercise"
    ac_id="44"
    airframe="airframes/tudelft/bebop_mav_course_exercise.xml"
    radio="radios/dummy.xml"

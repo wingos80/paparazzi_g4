@@ -30,7 +30,7 @@
   <settings>
     <dl_settings>
       <dl_settings name="ColorObjectDetector">
-         <dl_setting var="cod_lum_min1" min="0" step="1" max="255" shortname="y_min1"/>
+         <dl_setting var="cod_lum_min1" min="0" step="1" max="255" shortname="y33_min1"/>
          <dl_setting var="cod_lum_max1" min="0" step="1" max="255" shortname="y_max1"/>
          <dl_setting var="cod_cb_min1"   min="0" step="1" max="255" shortname="u_min1"/>
          <dl_setting var="cod_cb_max1"   min="0" step="1" max="255" shortname="u_max1"/>
