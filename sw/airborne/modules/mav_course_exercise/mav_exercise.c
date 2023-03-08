@@ -52,10 +52,10 @@ float moveDistance = 2;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 20.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
-float heading_increment = 20.f;
+float heading_increment = 90.f;
 uint32_t now_ts;
-float DIVERGENCE_TRESHHOLD = 0.3f;
-float optical_flow_count = 0;
+float divergence_threshold = 0.3f;
+float size_div = 0;
 
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -85,7 +85,7 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             int32_t __attribute__((unused)) flow_der_y,
                             float __attribute__((unused)) quality,
                             float size_divergence) {
-  optical_flow_count = flow_y;
+  size_div = size_divergence;
 }
 
 
@@ -107,14 +107,15 @@ void mav_exercise_periodic(void) {
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  PRINT("Divergence_count: %f  Divergence_threshold: %f \n", optical_flow_count, DIVERGENCE_TRESHHOLD);
+  PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
+  PRINT("Confidence: %d \n", obstacle_free_confidence);
 
 
   // update our safe confidence using color threshold
-  if (color_count < color_count_threshold && optical_flow_count < DIVERGENCE_TRESHHOLD ) {
+  if (size_div < divergence_threshold ) {
     obstacle_free_confidence++;
   } else {
-    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+    obstacle_free_confidence -= 50;  // be more cautious with positive obstacle detections
   }
 
 
@@ -220,7 +221,7 @@ uint8_t choose20degreesIncrementAvoidance(void)
   if (rand() % 2 == 0) {
     heading_increment = obstacle_heading_increment;
   } else {
-    heading_increment = -obstacle_heading_increment;
+    heading_increment = obstacle_heading_increment;
   }
   return false;
 }

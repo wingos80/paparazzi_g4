@@ -6,11 +6,16 @@
     Exercise module for Autonomous Flight of MAV Course
     </description>
   </doc>
-  <!-- <settings>
-    <dl_settings name="MAV">
-      <dl_setting var="DIVERGENCE_TRESHHOLD" min="0" step="0.02" max="1" shortname="div_thresh"/>
-    </dl_settings>  
-  </settings> -->
+  <settings>
+    <dl_settings>
+      <dl_settings name="MAV_EXERCISE">
+         <dl_setting var="divergence_threshold" min="0" step="0.01" max="1" shortname="div_thresh"/>
+      </dl_settings>
+    </dl_settings>
+  </settings>
+  
+
+
   <dep>
     <depends>cv_detect_color_object</depends>
   </dep>
