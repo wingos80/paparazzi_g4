@@ -65,6 +65,11 @@ int32_t floor_count = 0;                // green color count from color filter f
 int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
 float avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead if safe.
+float vy = 0.0;
+float vx = 0.0;
+float counter = 0.0;
+float counter_threshold = 4.0;
+float size_div = 0;
 
 const int16_t max_trajectory_confidence = 5;  // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -96,6 +101,22 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
   floor_centroid = pixel_y;
 }
 
+
+#ifndef FLOW_OPTICFLOW_ID
+#define FLOW_OPTICFLOW_ID ABI_BROADCAST
+#endif
+
+static abi_event optical_flow_ev;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+                            uint32_t __attribute__((unused)) stamp,
+                            int32_t __attribute__((unused)) flow_x,
+                            int32_t __attribute__((unused)) flow_y, 
+                            int32_t __attribute__((unused)) flow_der_x,
+                            int32_t __attribute__((unused)) flow_der_y,
+                            float __attribute__((unused)) quality,
+                            float size_divergence) {
+  size_div = size_divergence;
+}
 /*
  * Initialisation function
  */
@@ -108,6 +129,7 @@ void orange_avoider_guided_init(void)
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
   AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
+  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
 }
 
 /*
@@ -145,13 +167,22 @@ void orange_avoider_guided_periodic(void)
 
   switch (navigation_state){
     case SAFE:
-      if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0){
-        navigation_state = OBSTACLE_FOUND;
-      } else {
-        guidance_h_set_body_vel(speed_sp, 0);
+      guidance_h_set_body_vel(vx, vy);        
+      counter = counter + 0.1;
+      if (counter>counter_threshold){
+        // moveDistance = -moveDistance;
+        // heading_increment = -heading_increment;
+        vy = -vy;
+        vx = -vx;
+        counter = 0;
       }
+      // if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+      //   navigation_state = SAFE;
+      // } else if (obstacle_free_confidence == 0){
+      //   navigation_state = SAFE;
+      // } else {
+      //   guidance_h_set_body_vel(speed_sp, 0);
+      // }
 
       break;
     case OBSTACLE_FOUND:

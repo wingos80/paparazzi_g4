@@ -33,6 +33,8 @@
 #define CACHE_LINE_LENGTH 64
 #endif
 
+
+#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 /**
  * Create a new image
  * @param[out] *img The output image
@@ -152,6 +154,52 @@ void image_to_grayscale(struct image_t *input, struct image_t *output)
     }
   } else {
     for (int y = 0; y < height * width; y++) {
+        *dest++ = *source++;    // Y
+        source++;
+    }
+  }
+}
+
+/**
+ * Convert an image to grayscale.
+ * Depending on the output type the U/V bytes are removed
+ * @param[in] *input The input image (Needs to be YUV422)
+ * @param[out] *output The output image
+ */
+void crop_img(struct image_t *input, struct image_t *output)
+{  
+  // take away 120 pixels from the width and 170 pixels from the heigh
+  int w_change = 120;
+  int h_change = 170;
+  uint16_t new_w = input->w - 120;
+  uint16_t new_h = input->h - 170;
+
+
+  uint8_t *source = input->buf;
+  uint8_t *dest = output->buf;
+  // source++;
+  // Crop the image whilst fixing the center
+  source += w_change/2*input->h + h_change/2;
+
+  // Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+  output->eulers = input->eulers;
+  output->pprz_ts = input->pprz_ts;
+
+  // Copy the pixels
+  if (output->type == IMAGE_YUV422) {
+    for (int y = 0; y < new_h; y++) {
+      for (int x = 0; x < new_w; x++) {
+        *dest++ = *source;  // U / V
+        source++;
+        *dest++ = *source;    // Y
+        source++;
+      }
+      source += w_change;
+    }
+  } else {
+    PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    for (int y = 0; y < new_h * new_w; y++) {
         *dest++ = *source++;    // Y
         source++;
     }
@@ -357,6 +405,7 @@ void image_yuv422_downsample(struct image_t *input, struct image_t *output, uint
     source += pixelskip * input->w;
   }
 }
+
 
 /**
  * This function adds padding to input image by mirroring the edge image elements.

@@ -50,9 +50,10 @@
     <module name="ins" type="extended"/>
 
     <module name="logger_file"/>
-    <module name="mav_course_exercise"/>
+    <!-- <module name="obstacle_avoidance"/> -->
     <!-- Video/Camera modules -->
     <module name="bebop_cam"/>
+    <module name="mav_course_exercise"/>
     <!--module name="bebop_ae_awb">
       <define name="CV_AE_AWB_AV" value="1" />
       <define name="CV_AE_AWB_VERBOSE" value="0" />
@@ -61,11 +62,11 @@
       <define name="VIDEO_CAPTURE_CAMERA" value="front_camera"/>
       <define name="VIDEO_CAPTURE_FPS" value="10"/>
     </module>
-    <module name="cv_detect_color_object">
+    <!-- <module name="cv_detect_color_object">
       <define name="COLOR_OBJECT_DETECTOR_CAMERA1" value="front_camera"/>
       <define name="COLOR_OBJECT_DETECTOR_FPS1" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_DRAW1" value="1"/>
-    </module>
+    </module> -->
     <module name="cv_opticflow">
       <define name="OPTICFLOW_CAMERA" value="front_camera"/>
       <define name="MAX_HORIZON" value="10"/>

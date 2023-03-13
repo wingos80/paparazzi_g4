@@ -33,12 +33,16 @@
 #include "modules/core/abi.h"
 #include "modules/pose_history/pose_history.h"
 
+
 #include "lib/v4l/v4l2.h"
 #include "lib/encoding/jpeg.h"
 #include "lib/encoding/rtp.h"
+#include "lib/vision/image.h"
 #include "errno.h"
 
 #include "cv.h"
+
+#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
 /* ABI messages sender ID */
 #ifndef OPTICFLOW_AGL_ID
@@ -167,12 +171,19 @@ void opticflow_module_run(void)
  */
 struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 {
+  // int width = img->w;
+  // uint16_t height = img->h;
+  // PRINT("height and width: %i, %i \n", img->h, img->w);
+  // float w_factor= 0.666;
+  // PRINT("FLOAT: %f \n", w_factor);
+  // uint16_t w_casted = 10 * w_factor;
+  // PRINT("CASTED: %i \n", w_casted);
   // Copy the state
   // TODO : put accelerometer values at pose of img timestamp
   //struct opticflow_state_t temp_state;
   struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
   img->eulers = pose.eulers;
-
+  // PRINT("IM FROM OPTIC FLOW!!!!");
   // Do the optical flow calculation
   static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
   if(opticflow_calc_frame(&opticflow[camera_id], img, &temp_result[camera_id])){
@@ -182,5 +193,58 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     opticflow_got_result[camera_id] = true;
     pthread_mutex_unlock(&opticflow_mutex);
   }
+  
+  // take away 120 pixels from the width and 170 pixels from the heigh
+  int w_change = 120;
+  int h_change = 170;
+  uint16_t new_w = img->w - w_change;
+  uint16_t new_h = img->h - h_change;
+
+  // image_to_grayscale(img, img);
+  // struct image_t cropped_img;
+  // image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
+  // crop_img(img, &img);
+  // PRINT("%p:", img);
+  // img = &cropped_img;
+  // PRINT("%p:", img);
+  // PRINT("%p:", &cropped_img);
+  // PRINT("\n\n");
+  // struct image_t *cropped_img = crop_img(img);
+  // image_copy(cropped_img, img);
   return img;
 }
+
+
+// /**
+//  * @brief Function to crop the image
+//  * 
+//  * @param img height = 520, width = 240 (front cam normally)
+//  * @return struct image_t* 
+//  */
+// struct image_t *crop_img(struct image_t *img)
+// {
+//   // take away 120 pixels from the width and 170 pixels from the heigh
+//   int w_change = 120;
+//   int h_change = 170;
+//   uint16_t new_w = img->w - 120;
+//   uint16_t new_h = img->h - 170;
+
+//   struct image_t cropped_img;
+//   image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
+  
+//   uint8_t *source = img->buf;
+//   uint8_t *dest = (&cropped_img)->buf;
+//   // Crop the image whilst fixing the center
+//   source += h_change/2*img->w + w_change/2;
+  
+//   for (int y = 0; y < new_h; y++) {
+//     for (int x = 0; x < new_w; x++) {
+//       *dest++ = 127;  // U / V
+//       *dest++ = *source;    // Y
+//       source += 2;
+//     }
+//     source += w_change;
+//   }
+//   return &cropped_img;
+// }
+

@@ -21,10 +21,12 @@
 #include "mav_exercise.h"
 #include "modules/core/abi.h"
 #include "firmwares/rotorcraft/navigation.h"
+#include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "state.h"
 #include "autopilot_static.h"
 #include <stdio.h>
-
+#include <time.h>
+     
 #define NAV_C // needed to get the nav functions like Inside...
 #include "generated/flight_plan.h"
 
@@ -56,6 +58,12 @@ float heading_increment = 90.f;
 uint32_t now_ts;
 float divergence_threshold = 0.3f;
 float size_div = 0;
+int counter = 0;
+int counter_threshold = 4;
+int test = 1;
+int rotate = 1;
+float vy = 1.0;
+float vx = 0.0;
 
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -106,31 +114,49 @@ void mav_exercise_periodic(void) {
   // front_camera defined in airframe xml, with the video_capture module
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
-  PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
-  PRINT("Confidence: %d \n", obstacle_free_confidence);
+  // PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
+  // PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
 
 
   // update our safe confidence using color threshold
   if (size_div < divergence_threshold ) {
     obstacle_free_confidence++;
   } else {
-    obstacle_free_confidence -= 50;  // be more cautious with positive obstacle detections
+    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
   }
-
 
   // bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
   switch (navigation_state) {
     case SAFE:
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+      guidance_h_set_body_vel(0.0, 2.0);
+      if (test){        
+        counter++;
+        if (counter>counter_threshold){
+          moveDistance = -moveDistance;
+          heading_increment = -heading_increment;
+          counter = 0;
+        }
+
+        // moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+        // if (rotate){
+        //   increase_nav_heading(heading_increment);
+        //   waypoint_move_here_2d(WP_GOAL);
+        //   waypoint_move_here_2d(WP_TRAJECTORY);
+        // }else {
+        //   moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+        // }
+        break;
+      }
+      else{
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
         navigation_state = OUT_OF_BOUNDS;
       } else if (obstacle_free_confidence == 0) {
         navigation_state = OBSTACLE_FOUND;
       } else {
         moveWaypointForward(WP_GOAL, moveDistance);
+      }
       }
       break;
     case OBSTACLE_FOUND:

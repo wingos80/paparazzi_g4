@@ -30,6 +30,7 @@
 
 #include "modules/computer_vision/video_capture.h"
 #include "modules/computer_vision/cv.h"
+#include "lib/vision/image.h"
 
 #include "lib/encoding/jpeg.h"
 
@@ -130,10 +131,21 @@ void video_capture_save(struct image_t *img)
   sprintf(save_name, "%s/%u.jpg", save_dir, img->pprz_ts);
   printf("[video_capture] Saving image to %s.\n", save_name);
 
+
+  // take away 120 pixels from the width and 170 pixels from the heigh
+  int w_change = 120;
+  int h_change = 170;
+  uint16_t new_w = img->w - w_change;
+  uint16_t new_h = img->h - h_change;
+
+  struct image_t cropped_img;
+  image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
   // Create jpg image from raw frame
   struct image_t img_jpeg;
-  image_create(&img_jpeg, img->w, img->h, IMAGE_JPEG);
-  jpeg_encode_image(img, &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
+  image_create(&img_jpeg, new_w, new_h, IMAGE_JPEG);
+  crop_img(img, &cropped_img);
+
+  jpeg_encode_image(&cropped_img, &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
 
 #if JPEG_WITH_EXIF_HEADER
   write_exif_jpeg(save_name, img_jpeg.buf, img_jpeg.buf_size, img_jpeg.w, img_jpeg.h);
