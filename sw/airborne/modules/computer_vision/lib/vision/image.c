@@ -177,9 +177,8 @@ void crop_img(struct image_t *input, struct image_t *output)
 
   uint8_t *source = input->buf;
   uint8_t *dest = output->buf;
-  // source++;
   // Crop the image whilst fixing the center
-  source += w_change/2*input->h + h_change/2;
+  source += 2*(h_change/2*input->w + w_change/2);
 
   // Copy the creation timestamp (stays the same)
   output->ts = input->ts;
@@ -195,7 +194,7 @@ void crop_img(struct image_t *input, struct image_t *output)
         *dest++ = *source;    // Y
         source++;
       }
-      source += w_change;
+      source += 2*w_change;
     }
   } else {
     PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");

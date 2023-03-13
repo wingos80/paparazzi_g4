@@ -144,6 +144,7 @@ void video_capture_save(struct image_t *img)
   struct image_t img_jpeg;
   image_create(&img_jpeg, new_w, new_h, IMAGE_JPEG);
   crop_img(img, &cropped_img);
+  // image_to_grayscale(img, &cropped_img);
 
   jpeg_encode_image(&cropped_img, &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
 
