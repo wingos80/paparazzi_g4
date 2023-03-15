@@ -66,6 +66,14 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 #define ACTIVE_CAMERAS 1
 #endif
 
+#ifndef NUM_VER_SEC
+#define NUM_VER_SEC 3       ///< Number of vertical sections on image to calculate optical flow
+#endif
+
+#ifndef NUM_HOR_SEC
+#define NUM_HOR_SEC 3       ///< Number of horizontal sections on image to calculate optical flow
+#endif
+
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 static struct opticflow_result_t opticflow_result[ACTIVE_CAMERAS];    ///< The opticflow result
@@ -75,6 +83,9 @@ static pthread_mutex_t opticflow_mutex;                  ///< Mutex lock fo thre
 
 /* Static functions */
 struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id);     ///< The main optical flow calculation thread
+
+
+struct image_t sections_img_p[NUM_VER_SEC*NUM_HOR_SEC];
 
 #if PERIODIC_TELEMETRY
 #include "modules/datalink/telemetry.h"
@@ -111,7 +122,11 @@ void opticflow_module_init(void)
 {
   // Initialize the opticflow calculation
   for (int idx_camera = 0; idx_camera < ACTIVE_CAMERAS; idx_camera++) {
+    //for (int i = 0; i< NUM_VER_SEC; i++) {
+      //for (int j = 0; j< NUM_HOR_SEC; j++) {
     opticflow_got_result[idx_camera] = false;
+      //}
+    //}  
   }
   opticflow_calc_init(opticflow);
 
@@ -156,7 +171,7 @@ void opticflow_module_run(void)
         );
       }
       opticflow_got_result[idx_camera] = false;
-    }
+    };
   }
   pthread_mutex_unlock(&opticflow_mutex);
 }
@@ -171,49 +186,41 @@ void opticflow_module_run(void)
  */
 struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 {
-  // int width = img->w;
-  // uint16_t height = img->h;
-  // PRINT("height and width: %i, %i \n", img->h, img->w);
-  // float w_factor= 0.666;
-  // PRINT("FLOAT: %f \n", w_factor);
-  // uint16_t w_casted = 10 * w_factor;
-  // PRINT("CASTED: %i \n", w_casted);
-  // Copy the state
-  // TODO : put accelerometer values at pose of img timestamp
-  //struct opticflow_state_t temp_state;
-  struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
-  img->eulers = pose.eulers;
-  // PRINT("IM FROM OPTIC FLOW!!!!");
-  // Do the optical flow calculation
-  static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
-  if(opticflow_calc_frame(&opticflow[camera_id], img, &temp_result[camera_id])){
-    // Copy the result if finished
-    pthread_mutex_lock(&opticflow_mutex);
-    opticflow_result[camera_id] = temp_result[camera_id];
-    opticflow_got_result[camera_id] = true;
-    pthread_mutex_unlock(&opticflow_mutex);
-  }
-  
-  // take away 120 pixels from the width and 170 pixels from the heigh
+  // crop the image first - take away 120 pixels from the width and 170 pixels from the heigh
   int w_change = 120;
   int h_change = 170;
   uint16_t new_w = img->w - w_change;
   uint16_t new_h = img->h - h_change;
-
-  // image_to_grayscale(img, img);
-  // struct image_t cropped_img;
-  // image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
-  // crop_img(img, &img);
-  // PRINT("%p:", img);
-  // img = &cropped_img;
-  // PRINT("%p:", img);
-  // PRINT("%p:", &cropped_img);
-  // PRINT("\n\n");
-  // struct image_t *cropped_img = crop_img(img);
-  // image_copy(cropped_img, img);
+  
+  struct image_t cropped_img;
+  struct image_t sections_img[NUM_VER_SEC*NUM_HOR_SEC];
+  
+  image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
+  crop_img(img, &cropped_img);
+  img = &cropped_img;
+  //sections_img_p[0]= &sections_img[];
+  sections_img_f(img, sections_img_p, NUM_VER_SEC, NUM_HOR_SEC);
+  for (int i=0;i<NUM_VER_SEC;i++) {
+    for (int j=0;j<NUM_HOR_SEC;j++) {
+      //struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
+      //img->eulers = pose.eulers;
+      // PRINT("IM FROM OPTIC FLOW!!!!");
+      // Do the optical flow calculation
+      //sections_img_p[NUM_HOR_SEC*i+j]
+      static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
+      if(opticflow_calc_frame(&opticflow[camera_id], img, &temp_result[camera_id])){
+        // Copy the result if finished
+        pthread_mutex_lock(&opticflow_mutex);
+        opticflow_result[camera_id] = temp_result[camera_id];
+        opticflow_got_result[camera_id] = true;
+        pthread_mutex_unlock(&opticflow_mutex);
+      };
+    }
+  }
+  // Copy the state
+  // TODO : put accelerometer values at pose of img timestamp 
   return img;
-}
-
+  }
 
 // /**
 //  * @brief Function to crop the image

@@ -205,6 +205,55 @@ void crop_img(struct image_t *input, struct image_t *output)
   }
 }
 
+void sections_img_f(struct image_t *input, struct image_t *sections_img_p, int num_ver_sec, int num_hor_sec)
+{ 
+  int section_h = input->h/num_ver_sec; 
+  int section_w = input->w/num_hor_sec; 
+  int x1_pixels, x2_pixels, y1_pixels, y2_pixels;
+  int index;
+
+  uint8_t *source = input->buf;
+  uint8_t *dest;
+  
+  for (int i=0;i<num_ver_sec;i++) {
+    for (int j=0;j<num_hor_sec;j++) {
+        index = num_hor_sec*i+j;
+        image_create(sections_img_p, section_w, section_h, IMAGE_YUV422);
+        
+        *dest = sections_img_p->buf;
+        // Copy the creation timestamp (stays the same)
+        sections_img_p->ts = input->ts;
+        sections_img_p->eulers = input->eulers;
+        sections_img_p->pprz_ts = input->pprz_ts;
+
+        x1_pixels = i*section_w+1;
+        x2_pixels = (i+1)*section_w; 
+        y1_pixels = j*section_h+1;
+        y2_pixels = (j+1)*section_h; 
+        
+        // Copy the pixels
+        if (sections_img_p->type == IMAGE_YUV422) {
+          for (int y = y1_pixels; y <= y2_pixels; y++) {
+            for (int x = x1_pixels; x <= x2_pixels; x++) {
+              *dest++ = *source;  // U / V
+              source++;
+              *dest++ = *source;    // Y
+              source++;
+            }
+            source += 2*section_w;
+          }
+        } else {
+          PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+          for (int y = 0; y < section_h * section_w; y++) {
+              *dest++ = *source++;    // Y
+              source++;
+          }        
+        sections_img_p++;
+        }  
+    }
+  }  
+}
+
 /**
  * Filter colors in an YUV422 image
  * @param[in] *input The input image to filter
