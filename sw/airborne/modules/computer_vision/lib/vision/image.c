@@ -211,7 +211,6 @@ void sections_img_f(struct image_t *input, struct image_t *output, int section_w
 
   uint8_t *source = input->buf;
   uint8_t *dest = output->buf;
-
   //Copy the creation timestamp (stays the same)
   output->ts = input->ts;
   output->eulers = input->eulers;
@@ -224,6 +223,7 @@ void sections_img_f(struct image_t *input, struct image_t *output, int section_w
     source += 2*(y1_pixels*section_w);
   } else if (divide == 0){
     dest += 2*(y1_pixels*section_w);
+    // bias = j*80 + 30;
   }
   //Copy the pixels
   if (output->type == IMAGE_YUV422) {
