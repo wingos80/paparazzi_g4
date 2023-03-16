@@ -77,7 +77,6 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 static struct opticflow_result_t opticflow_result[ACTIVE_CAMERAS];    ///< The opticflow result
-static struct opticflow_result_t div_test[NUM_HOR_SEC];
 
 static bool opticflow_got_result[ACTIVE_CAMERAS];       ///< When we have an optical flow calculation
 static pthread_mutex_t opticflow_mutex;                  ///< Mutex lock fo thread safety
@@ -199,7 +198,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   
   image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
   image_create(&final_img, section_w, section_h*NUM_HOR_SEC, IMAGE_YUV422);
-  
+
   crop_img(img, &cropped_img);
   
   for (int j=0;j<NUM_HOR_SEC;j++) {
@@ -210,27 +209,21 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     // img->eulers = pose.eulers;
     // Do the optical flow calculation
     static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
-    bool val = opticflow_calc_frame(&opticflow[camera_id], &sections_img_p[index], &temp_result[camera_id]);
-    PRINT("\nreturn bool of the optic flow calc:%d \n", val);
-    if(TRUE){
+    if(opticflow_calc_frame(&opticflow[camera_id], &sections_img_p[index], &temp_result[camera_id])){
       // Copy the result if finished
-      
       pthread_mutex_lock(&opticflow_mutex);
       opticflow_result[camera_id] = temp_result[camera_id];
-      div_test[index] = temp_result[camera_id];
-      PRINT("Divergence for section %d = %f \n", index, div_test[index].div_size);
       opticflow_got_result[camera_id] = true;
-      pthread_mutex_unlock(&opticflow_mutex);
 
       // TODO:coloring function to color the section
       // glueing backkkk
 
-      
+      pthread_mutex_unlock(&opticflow_mutex);
       // div_matrix[i][j] = opticflow_result[camera_id].div_size;
     };
   }
-  PRINT("-*-*-*-*-*--*-*-*-*-*--*-*-*-*-*--*-*-*-*-*--*-*-*-*-*-\n\n\n");
-  
+
+
   for (int j=0;j<NUM_HOR_SEC;j++) {
     index = j;
     sections_img_f(&sections_img_p[index], &final_img, section_w, section_h, j, 0);   
