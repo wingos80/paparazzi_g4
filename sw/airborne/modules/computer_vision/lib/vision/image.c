@@ -205,54 +205,87 @@ void crop_img(struct image_t *input, struct image_t *output)
   }
 }
 
-void sections_img_f(struct image_t *input, struct image_t *sections_img_p, int num_ver_sec, int num_hor_sec)
+void sections_img_f(struct image_t *input, struct image_t *output, int section_w, int section_h, int j, int divide)
 { 
-  int section_h = input->h/num_ver_sec; 
-  int section_w = input->w/num_hor_sec; 
-  int x1_pixels, x2_pixels, y1_pixels, y2_pixels;
-  int index;
+  int y1_pixels, y2_pixels;
 
   uint8_t *source = input->buf;
-  uint8_t *dest;
-  
-  for (int i=0;i<num_ver_sec;i++) {
-    for (int j=0;j<num_hor_sec;j++) {
-        index = num_hor_sec*i+j;
-        image_create(sections_img_p, section_w, section_h, IMAGE_YUV422);
-        
-        *dest = sections_img_p->buf;
-        // Copy the creation timestamp (stays the same)
-        sections_img_p->ts = input->ts;
-        sections_img_p->eulers = input->eulers;
-        sections_img_p->pprz_ts = input->pprz_ts;
+  uint8_t *dest = output->buf;
 
-        x1_pixels = i*section_w+1;
-        x2_pixels = (i+1)*section_w; 
-        y1_pixels = j*section_h+1;
-        y2_pixels = (j+1)*section_h; 
-        
-        // Copy the pixels
-        if (sections_img_p->type == IMAGE_YUV422) {
-          for (int y = y1_pixels; y <= y2_pixels; y++) {
-            for (int x = x1_pixels; x <= x2_pixels; x++) {
-              *dest++ = *source;  // U / V
-              source++;
-              *dest++ = *source;    // Y
-              source++;
-            }
-            source += 2*section_w;
-          }
-        } else {
-          PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
-          for (int y = 0; y < section_h * section_w; y++) {
-              *dest++ = *source++;    // Y
-              source++;
-          }        
-        sections_img_p++;
-        }  
+  //Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+  output->eulers = input->eulers;
+  output->pprz_ts = input->pprz_ts;
+
+  y1_pixels = j*section_h;
+  y2_pixels = (j+1)*section_h-1;
+  // int row_skip = 2;
+  if (divide == 1) {
+    source += 2*(y1_pixels*section_w);
+  } else if (divide == 0){
+    dest += 2*(y1_pixels*section_w);
+  }
+  //Copy the pixels
+  if (output->type == IMAGE_YUV422) {
+    for (int y = 0; y < section_h; y++) {
+      for (int x = 0; x < section_w; x++) {
+        *dest = *source;  // U / V
+        source++;
+        dest++;
+        *dest = *source;    // Y
+        source++;
+        dest++;
+      }
+      // source += row_skip;
     }
-  }  
+  } else {
+    PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    for (int y = 0; y < section_h * section_w; y++) {
+        *dest++ = *source++;    // Y
+        source++;
+    }        
+  }
 }
+
+
+// void glue_back(struct image_t *input, struct image_t *output, int index) {  
+//   int y1_pixels, y2_pixels;
+
+//   uint8_t *source = input->buf;
+//   uint8_t *dest = output->buf;
+
+//   //Copy the creation timestamp (stays the same)
+//   output->ts = input->ts;
+//   output->eulers = input->eulers;
+//   output->pprz_ts = input->pprz_ts;
+
+//   y1_pixels = j*section_h;
+//   y2_pixels = (j+1)*section_h-1;
+//   // int row_skip = 2;
+  
+//   source += 2*(y1_pixels*section_w);
+//   //Copy the pixels
+//   if (output->type == IMAGE_YUV422) {
+//     for (int y = 0; y < section_h; y++) {
+//       for (int x = 0; x < section_w; x++) {
+//         *dest = *source;  // U / V
+//         source++;
+//         dest++;
+//         *dest = *source;    // Y
+//         source++;
+//         dest++;
+//       }
+//       // source += row_skip;
+//     }
+//   } else {
+//     PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+//     for (int y = 0; y < section_h * section_w; y++) {
+//         *dest++ = *source++;    // Y
+//         source++;
+//     }        
+//   }
+// }
+
 
 /**
  * Filter colors in an YUV422 image

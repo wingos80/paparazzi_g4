@@ -40,6 +40,14 @@
 #include "lib/exif/exif_module.h"
 #endif
 
+// #ifndef NUM_VER_SEC
+// #define NUM_VER_SEC 3     ///< Number of vertical sections on image to calculate optical flow
+// #endif
+
+#ifndef NUM_HOR_SEC
+#define NUM_HOR_SEC 3     ///< Number of horizontal sections on image to calculate optical flow
+#endif
+
 #ifndef VIDEO_CAPTURE_PATH
 #define VIDEO_CAPTURE_PATH /data/video/images
 #endif
@@ -64,6 +72,8 @@ static char save_dir[256];
 // Forward function declarations
 struct image_t *video_capture_func(struct image_t *img, uint8_t camera_id);
 void video_capture_save(struct image_t *img);
+
+struct image_t sections_img_p[NUM_HOR_SEC];
 
 
 void video_capture_init(void)
@@ -132,21 +142,13 @@ void video_capture_save(struct image_t *img)
   printf("[video_capture] Saving image to %s.\n", save_name);
 
 
-  // take away 120 pixels from the width and 170 pixels from the heigh
-  int w_change = 120;
-  int h_change = 170;
-  uint16_t new_w = img->w - w_change;
-  uint16_t new_h = img->h - h_change;
-
-  struct image_t cropped_img;
-  image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
   // Create jpg image from raw frame
   struct image_t img_jpeg;
-  image_create(&img_jpeg, new_w, new_h, IMAGE_JPEG);
-  crop_img(img, &cropped_img);
-  // image_to_grayscale(img, &cropped_img);
+  image_create(&img_jpeg, img->w, img->h, IMAGE_JPEG);
+  
 
-  jpeg_encode_image(&cropped_img, &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
+  //jpeg_encode_image(&sections_img_p[0], &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
+  jpeg_encode_image(img, &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
 
 #if JPEG_WITH_EXIF_HEADER
   write_exif_jpeg(save_name, img_jpeg.buf, img_jpeg.buf_size, img_jpeg.w, img_jpeg.h);

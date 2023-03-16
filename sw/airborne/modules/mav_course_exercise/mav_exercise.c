@@ -115,7 +115,7 @@ void mav_exercise_periodic(void) {
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   // PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  // PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
+  //PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
 
 
   // update our safe confidence using color threshold
