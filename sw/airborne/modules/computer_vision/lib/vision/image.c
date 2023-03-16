@@ -205,7 +205,7 @@ void crop_img(struct image_t *input, struct image_t *output)
   }
 }
 
-void sections_img_f(struct image_t *input, struct image_t *output, int section_w, int section_h, int j, int divide)
+void divide_img(struct image_t *input, struct image_t *output, int section_w, int section_h, int j)
 { 
   int y1_pixels, y2_pixels;
 
@@ -220,11 +220,8 @@ void sections_img_f(struct image_t *input, struct image_t *output, int section_w
   y1_pixels = j*section_h;
   y2_pixels = (j+1)*section_h-1;
   // int row_skip = 2;
-  if (divide == 1) {
-    source += 2*(y1_pixels*section_w);
-  } else if (divide == 0){
-    dest += 2*(y1_pixels*section_w);
-  }
+  source += 2*(y1_pixels*section_w);
+  
   //Copy the pixels
   if (output->type == IMAGE_YUV422) {
     for (int y = 0; y < section_h; y++) {
@@ -248,44 +245,92 @@ void sections_img_f(struct image_t *input, struct image_t *output, int section_w
 }
 
 
-// void glue_back(struct image_t *input, struct image_t *output, int index) {  
-//   int y1_pixels, y2_pixels;
+void glue_img(struct image_t *input, struct image_t *output, int section_w, int section_h, int j)
+{ 
+  int y1_pixels, y2_pixels;
 
-//   uint8_t *source = input->buf;
-//   uint8_t *dest = output->buf;
+  uint8_t *source = input->buf;
+  uint8_t *dest = output->buf;
 
-//   //Copy the creation timestamp (stays the same)
-//   output->ts = input->ts;
-//   output->eulers = input->eulers;
-//   output->pprz_ts = input->pprz_ts;
+  //Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+  output->eulers = input->eulers;
+  output->pprz_ts = input->pprz_ts;
 
-//   y1_pixels = j*section_h;
-//   y2_pixels = (j+1)*section_h-1;
-//   // int row_skip = 2;
+  y1_pixels = j*section_h;
+  y2_pixels = (j+1)*section_h-1;
   
-//   dest += 2*(y1_pixels*section_w);
-//   //Copy the pixels
-//   if (output->type == IMAGE_YUV422) {
-//     for (int y = 0; y < section_h; y++) {
-//       for (int x = 0; x < section_w; x++) {
-//         *dest = *source;  // U / V
-//         source++;
-//         dest++;
-//         *dest = *source;    // Y
-//         source++;
-//         dest++;
-//       }
-//       // source += row_skip;
-//     }
-//   } else {
-//     PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
-//     for (int y = 0; y < section_h * section_w; y++) {
-//         *dest++ = *source++;    // Y
-//         source++;
-//     }        
-//   }
-// }
+  int skip = 2*(y1_pixels*section_w);
+  dest += skip;
+    
+  //Copy the pixels
+  if (output->type == IMAGE_YUV422) {
+    for (int y = 0; y < section_h; y++) {
+      for (int x = 0; x < section_w; x++) {
+        *dest = *source;  // U / V
+        source++;
+        dest++;
+        *dest = *source;    // Y
+        source++;
+        dest++;
+      }
+      // source += row_skip;
+    }
+  } else {
+    PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    for (int y = 0; y < section_h * section_w; y++) {
+        *dest++ = *source++;    // Y
+        source++;
+    }        
+  }
+}
 
+void div_coloring(struct image_t *input, float div)
+{
+  uint16_t cnt = 0;
+  uint8_t *source = (uint8_t *)input->buf;
+  uint8_t *dest = (uint8_t *)output->buf;
+
+  // Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+
+  // Go trough all the pixels
+  for (uint16_t y = 0; y < output->h; y++) {
+    for (uint16_t x = 0; x < output->w; x += 2) {
+      // Check if the color is inside the specified values
+      if (
+        (dest[1] >= y_m)
+        && (dest[1] <= y_M)
+        && (dest[0] >= u_m)
+        && (dest[0] <= u_M)
+        && (dest[2] >= v_m)
+        && (dest[2] <= v_M)
+      ) {
+        cnt ++;
+        // UYVY
+        dest[0] = 64;        // U
+        dest[1] = source[1];  // Y
+        dest[2] = 255;        // V
+        dest[3] = source[3];  // Y
+      } else {
+        // UYVY
+        char u = source[0] - 127;
+        u /= 4;
+        dest[0] = 127;        // U
+        dest[1] = source[1];  // Y
+        u = source[2] - 127;
+        u /= 4;
+        dest[2] = 127;        // V
+        dest[3] = source[3];  // Y
+      }
+
+      // Go to the next 2 pixels
+      dest += 4;
+      source += 4;
+    }
+  }
+  return cnt;
+}
 
 /**
  * Filter colors in an YUV422 image

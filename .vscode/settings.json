@@ -15,7 +15,8 @@
         "array": "c",
         "string": "c",
         "string_view": "c",
-        "jpeg.h": "c"
+        "jpeg.h": "c",
+        "cstdlib": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "esbonio.sphinx.confDir": "",

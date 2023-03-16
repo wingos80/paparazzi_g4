@@ -60,9 +60,10 @@ float divergence_threshold = 0.3f;
 float size_div = 0;
 int counter = 0;
 int counter_threshold = 4;
+  
 int test = 1;
-int rotate = 1;
-float vy = 1.0;
+int rotate = 0;
+float vy = 0.0;
 float vx = 0.0;
 
 // needed to receive output from a separate module running on a parallel process
@@ -130,7 +131,7 @@ void mav_exercise_periodic(void) {
 
   switch (navigation_state) {
     case SAFE:
-      guidance_h_set_body_vel(0.0, 2.0);
+      // guidance_h_set_body_vel(0.0, 2.0);
       if (test){        
         counter++;
         if (counter>counter_threshold){
@@ -139,14 +140,14 @@ void mav_exercise_periodic(void) {
           counter = 0;
         }
 
-        // moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
-        // if (rotate){
-        //   increase_nav_heading(heading_increment);
-        //   waypoint_move_here_2d(WP_GOAL);
-        //   waypoint_move_here_2d(WP_TRAJECTORY);
-        // }else {
-        //   moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
-        // }
+        moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+        if (rotate){
+          increase_nav_heading(heading_increment);
+          waypoint_move_here_2d(WP_GOAL);
+          waypoint_move_here_2d(WP_TRAJECTORY);
+        }else {
+          moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+        }
         break;
       }
       else{
