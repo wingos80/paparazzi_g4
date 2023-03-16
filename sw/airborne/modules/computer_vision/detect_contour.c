@@ -48,10 +48,13 @@ void detect_contour_init(void)
 {
   cv_add_to_device(&DETECT_CONTOUR_CAMERA, contour_func, DETECT_CONTOUR_FPS, 0);
   // in the mavlab, bright
-  cont_thres.lower_y = 16;  cont_thres.lower_u = 135; cont_thres.lower_v = 80;
-  cont_thres.upper_y = 100; cont_thres.upper_u = 175; cont_thres.upper_v = 165;
+  //cont_thres.lower_y = 16;  cont_thres.lower_u = 135; cont_thres.lower_v = 80;
+  //cont_thres.upper_y = 100; cont_thres.upper_u = 175; cont_thres.upper_v = 165;
   //
   // for cyberzoo: Y:12-95, U:129-161, V:80-165, turn white.
+  cont_thres.lower_y = 12;  cont_thres.lower_u = 129; cont_thres.lower_v = 80;
+  cont_thres.upper_y = 95; cont_thres.upper_u = 161; cont_thres.upper_v = 165;
+
   //int y1=16;  int u1=129; int v1=80; % cyberzoo, dark
   //int y2=100; int u2=161; int v2=165;
 }

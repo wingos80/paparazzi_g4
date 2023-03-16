@@ -1,0 +1,16 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+<module name="obstacle_detect" dir="obstacle_detect">
+  <doc>
+    <description>Module for detecting the obstacles during flight time</description>
+  </doc>
+  <header>
+    <file name="obstacle_detect.h"/>
+  </header>
+  <init fun="obst_detect_init()"/>
+  <periodic fun="obst_detect_1Hz()" freq="1.0" autorun="TRUE"/>
+  <periodic fun="obst_detect_15Hz()" freq="15.0" autorun="TRUE"/>
+  <makefile>
+    <file name="obstacle_detect.c"/>
+    <test/>
+  </makefile>
+</module>
