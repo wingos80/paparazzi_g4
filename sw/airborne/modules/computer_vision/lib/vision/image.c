@@ -263,7 +263,7 @@ void sections_img_f(struct image_t *input, struct image_t *output, int section_w
 //   y2_pixels = (j+1)*section_h-1;
 //   // int row_skip = 2;
   
-//   source += 2*(y1_pixels*section_w);
+//   dest += 2*(y1_pixels*section_w);
 //   //Copy the pixels
 //   if (output->type == IMAGE_YUV422) {
 //     for (int y = 0; y < section_h; y++) {

@@ -84,11 +84,9 @@ static pthread_mutex_t opticflow_mutex;                  ///< Mutex lock fo thre
 /* Static functions */
 struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id);     ///< The main optical flow calculation thread
 
-
+struct image_t cropped_img;
 struct image_t sections_img_p[NUM_HOR_SEC];
-
-// float div_matrix[NUM_VER_SEC][NUM_HOR_SEC];
-
+struct image_t final_img;
 
 #if PERIODIC_TELEMETRY
 #include "modules/datalink/telemetry.h"
@@ -194,27 +192,20 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   int h_change = 170;
   uint16_t new_w = img->w - w_change;
   uint16_t new_h = img->h - h_change;
-  int section_h; 
-  int section_w;
+  int section_h = new_h/NUM_HOR_SEC;  
+  int section_w = new_w;
   int index;
   
-  struct image_t cropped_img;
-  struct image_t sections_img[NUM_HOR_SEC];
-  
   image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
-  crop_img(img, &cropped_img);
-  img = &cropped_img;
+  image_create(&final_img, section_w, section_h*NUM_HOR_SEC, IMAGE_YUV422);
 
-  section_h = img->h/NUM_HOR_SEC; 
-  section_w = img->w; 
-  
-  //sections_img_p[0]= &sections_img[];
+  crop_img(img, &cropped_img);
   
   for (int j=0;j<NUM_HOR_SEC;j++) {
     index = j;
     image_create(&sections_img_p[index], section_w, section_h, IMAGE_YUV422);
-    sections_img_f(img, &sections_img_p[index], section_w, section_h, j, 1);
-    //struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
+    sections_img_f(&cropped_img, &sections_img_p[index], section_w, section_h, j, 1);
+    // struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
     // img->eulers = pose.eulers;
     // Do the optical flow calculation
     static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
@@ -223,18 +214,24 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
       pthread_mutex_lock(&opticflow_mutex);
       opticflow_result[camera_id] = temp_result[camera_id];
       opticflow_got_result[camera_id] = true;
-      //coloring function to color the section
-      // glue_back(img, &sections_img_p[index], index);
 
-      //sections_img_f(&sections_img_p[index], img, section_w, section_h, j, 0);
+      // TODO:coloring function to color the section
+      // glueing backkkk
+
       pthread_mutex_unlock(&opticflow_mutex);
       // div_matrix[i][j] = opticflow_result[camera_id].div_size;
     };
   }
-  // Copy the state
-  // TODO : put accelerometer values at pose of img timestamp &sections_img_p[i*NUM_VER_SEC+j]
-  img = &sections_img_p[0];
+
+
+  for (int j=0;j<NUM_HOR_SEC;j++) {
+    index = j;
+    sections_img_f(&sections_img_p[index], &final_img, section_w, section_h, j, 0);   
+  }
+
+  //img = &sections_img_p[0];
   //img = aux;
+  img = &final_img;
   return img;
   }
 
