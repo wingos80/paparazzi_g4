@@ -287,49 +287,52 @@ void glue_img(struct image_t *input, struct image_t *output, int section_w, int 
 
 void div_coloring(struct image_t *input, float div)
 {
-  uint16_t cnt = 0;
-  uint8_t *source = (uint8_t *)input->buf;
-  uint8_t *dest = (uint8_t *)output->buf;
+  uint8_t *source = input->buf;
 
-  // Copy the creation timestamp (stays the same)
-  output->ts = input->ts;
+  float YUV_blue[3] = {29.0, 255.0, 107.0};
+  float YUV_white[3] = {255.0, 128.0, 128.0};
+  float YUV_red[3] = {76.0, 84.0, 255.0};
+  float YUV_out[3] = {0.0, 0.0, 0.0};
+  float delta_b2w[3] = {0.0, 0.0, 0.0};
+  float delta_w2r[3] = {0.0, 0.0, 0.0};  
+
+  for(int i=0; i<3; i++) {    
+      delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
+      delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
+  }
+
+  if (div > 1) {
+      printf("Error: Divergence > 1.");
+  }
+  else if (div <= 0.5) {
+      for(int i=0; i<3; i++) {  
+          YUV_out[i] = YUV_blue[i] + (div * delta_b2w[i]);
+      }
+  }
+  else{
+      float div_temp = div - 0.5;
+      for(int i=0; i<3; i++) {  
+          YUV_out[i] = YUV_white[i] + (div_temp * delta_w2r[i]);
+      }
+  }
+
+  uint8_t U = YUV_out[1];
+  uint8_t V = YUV_out[2];
+
 
   // Go trough all the pixels
-  for (uint16_t y = 0; y < output->h; y++) {
-    for (uint16_t x = 0; x < output->w; x += 2) {
+  for (uint16_t y = 0; y < input->h; y++) {
+    for (uint16_t x = 0; x < input->w; x += 2) {
       // Check if the color is inside the specified values
-      if (
-        (dest[1] >= y_m)
-        && (dest[1] <= y_M)
-        && (dest[0] >= u_m)
-        && (dest[0] <= u_M)
-        && (dest[2] >= v_m)
-        && (dest[2] <= v_M)
-      ) {
-        cnt ++;
-        // UYVY
-        dest[0] = 64;        // U
-        dest[1] = source[1];  // Y
-        dest[2] = 255;        // V
-        dest[3] = source[3];  // Y
-      } else {
-        // UYVY
-        char u = source[0] - 127;
-        u /= 4;
-        dest[0] = 127;        // U
-        dest[1] = source[1];  // Y
-        u = source[2] - 127;
-        u /= 4;
-        dest[2] = 127;        // V
-        dest[3] = source[3];  // Y
-      }
+      *source = U;
+      source+=2;
+      *source = V;
+      source+=2;
 
-      // Go to the next 2 pixels
-      dest += 4;
-      source += 4;
+      // // Go to the next 2 pixels
+      // source += 4;
     }
   }
-  return cnt;
 }
 
 /**

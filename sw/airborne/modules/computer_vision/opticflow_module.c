@@ -77,7 +77,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 static struct opticflow_result_t opticflow_result[ACTIVE_CAMERAS];    ///< The opticflow result
-static struct opticflow_result_t div_test[NUM_HOR_SEC]; 
+static float div_test[NUM_HOR_SEC]; 
 
 static bool opticflow_got_result[ACTIVE_CAMERAS];       ///< When we have an optical flow calculation
 static pthread_mutex_t opticflow_mutex;                  ///< Mutex lock fo thread safety
@@ -216,8 +216,8 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
       opticflow_result[camera_id] = temp_result[camera_id];
       opticflow_got_result[camera_id] = true;
       
-      div_test[index] = temp_result[camera_id].div_size;
-      PRINT("Section: %d, div_size: %f", index, div_test[index]);
+      div_test[index] = opticflow_result[camera_id].div_size;
+      PRINT("Section: %d, div_size: %f\n", index, div_test[index]);
       // TODO:coloring function to color the section
       // glueing backkkk
 
@@ -229,7 +229,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 
 
   for (int index=0;index<NUM_HOR_SEC;index++) {
-    //div_coloring(&sections_img_p[index], div_test[index]);
+    div_coloring(&sections_img_p[index], div_test[index]);
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   }
 
