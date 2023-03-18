@@ -49,7 +49,7 @@
 #define OPTICFLOW_AGL_ID ABI_BROADCAST    ///< Default sonar/agl to use in opticflow visual_estimator
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_AGL_ID)
-
+  
 #ifndef OPTICFLOW_FPS
 #define OPTICFLOW_FPS 0       ///< Default FPS (zero means run at camera fps)
 #endif
@@ -71,7 +71,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 // #endif
 
 #ifndef NUM_HOR_SEC
-#define NUM_HOR_SEC 3      ///< Number of horizontal sections on image to calculate optical flow
+#define NUM_HOR_SEC 1      ///< Number of horizontal sections on image to calculate optical flow
 #endif
 
 /* The main opticflow variables */

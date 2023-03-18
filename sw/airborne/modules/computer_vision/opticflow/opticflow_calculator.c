@@ -50,7 +50,7 @@
 #include BOARD_CONFIG
 
 // whether to show the flow and corners:
-#define OPTICFLOW_SHOW_CORNERS 1
+#define OPTICFLOW_SHOW_CORNERS 0
 
 #define EXHAUSTIVE_FAST 0
 #define ACT_FAST 1

@@ -54,7 +54,7 @@ float moveDistance = 2;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 20.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
-float heading_increment = 90.f;
+float heading_increment = 15.f;
 uint32_t now_ts;
 float divergence_threshold = 0.3f;
 float size_div = 0;
@@ -140,7 +140,7 @@ void mav_exercise_periodic(void) {
           counter = 0;
         }
 
-        moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+        // moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
         if (rotate){
           increase_nav_heading(heading_increment);
           waypoint_move_here_2d(WP_GOAL);
