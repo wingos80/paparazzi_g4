@@ -212,7 +212,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     // img->eulers = pose.eulers;
     // Do the optical flow calculation
     static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
-    bool ret_val = opticflow_calc_frame(&opticflow[camera_id], &sections_img_p[index], &temp_result[camera_id]);
+    bool ret_val = opticflow_calc_frame(&opticflow[camera_id], &sections_img_p[index], &temp_result[camera_id], index);
     if(ret_val){
       // Copy the result if finished
       pthread_mutex_lock(&opticflow_mutex);

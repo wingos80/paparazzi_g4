@@ -45,12 +45,12 @@
 #include "size_divergence.h"
 #include "linear_flow_fit.h"
 #include "modules/sonar/agl_dist.h"
-
+#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 // to get the definition of front_camera / bottom_camera
 #include BOARD_CONFIG
 
 // whether to show the flow and corners:
-#define OPTICFLOW_SHOW_CORNERS 0
+#define OPTICFLOW_SHOW_CORNERS 1
 
 #define EXHAUSTIVE_FAST 0
 #define ACT_FAST 1
@@ -365,11 +365,11 @@ PRINT_CONFIG_VAR(OPTICFLOW_TRACK_BACK_CAMERA2)
 // Whether to draw the flow on the image:
 // False by default, since it changes the image and costs time.
 #ifndef OPTICFLOW_SHOW_FLOW
-#define OPTICFLOW_SHOW_FLOW FALSE
+#define OPTICFLOW_SHOW_FLOW TRUE
 #endif
 
 #ifndef OPTICFLOW_SHOW_FLOW_CAMERA2
-#define OPTICFLOW_SHOW_FLOW_CAMERA2 FALSE
+#define OPTICFLOW_SHOW_FLOW_CAMERA2 TRUE
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_SHOW_FLOW)
 PRINT_CONFIG_VAR(OPTICFLOW_SHOW_FLOW_CAMERA2)
@@ -490,7 +490,7 @@ void opticflow_calc_init(struct opticflow_t opticflow[])
  * @return Was optical flow successful
  */
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
-                             struct opticflow_result_t *result)
+                             struct opticflow_result_t *result, int index)
 {
   if (opticflow->just_switched_method) {
     // Create the image buffers
@@ -519,12 +519,15 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   struct linear_flow_fit_info fit_info;
 
   // Update FPS for information
-  // float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
-  // if (dt > 1e-5) {
-  //   result->fps = 1000.f / dt;
-  // } else {
-  //   return false;
-  // }
+  float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
+  PRINT("frame time : %f\n", dt);
+  PRINT("INDEX: %d", index);
+  if (dt > 1e-5) {
+    result->fps = 1000.f / dt;
+  } else {
+    PRINT("FAILED AT FRAME TIME\n");
+    return false;
+  }
 
   // *************************************************************************************
   // Corner detection
@@ -593,8 +596,12 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->div_size = 0;
     result->divergence = 0;
     result->noise_measurement = 5.0;
-
+    
+    PRINT("FAILED AT CORNER CNT\n");
+    if (index==2){
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
+    PRINT("SWITCHED IN 1");
+    }
     return false;
   }
 
@@ -695,7 +702,11 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->flow_y = 0;
 
     free(vectors);
+    PRINT("FAILED AT TRACKED CNT\n");
+    if (index==2){
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
+    PRINT("SWITCHED IN 2");
+    }
     return false;
   } else if (result->tracked_cnt % 2) {
     // Take the median point
@@ -811,7 +822,12 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     }
   }
   free(vectors);
+  
+    
+  if (index==2){
   image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
+  PRINT("SWITCHED IN 3");
+  }
   return true;
 }
 
@@ -1164,10 +1180,11 @@ bool calc_edgeflow_tot(struct opticflow_t *opticflow, struct image_t *img,
  * @param[in] *opticflow The opticalflow structure that keeps track of previous images
  * @param[in] *state The state of the drone
  * @param[in] *img The image frame to calculate the optical flow from
+ * @param[in] *index index of the sectioned *img (...)
  * @param[out] *result The optical flow result
  */
 bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
-                          struct opticflow_result_t *result)
+                          struct opticflow_result_t *result, int index)
 {
   bool flow_successful = false;
   // A switch counter that checks in the loop if the current method is similar,
@@ -1184,7 +1201,7 @@ bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
 
   // Switch between methods (0 = fast9/lukas-kanade, 1 = EdgeFlow)
   if (opticflow->method == 0) {
-    flow_successful = calc_fast9_lukas_kanade(opticflow, img, result);
+    flow_successful = calc_fast9_lukas_kanade(opticflow, img, result, index);
   } else if (opticflow->method == 1) {
     flow_successful = calc_edgeflow_tot(opticflow, img, result);
   }
