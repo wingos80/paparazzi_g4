@@ -103,7 +103,7 @@ void image_free(struct image_t *img);
 void image_copy(struct image_t *input, struct image_t *output);
 void image_switch(struct image_t *a, struct image_t *b);
 void image_to_grayscale(struct image_t *input, struct image_t *output);
-void crop_img(struct image_t *input, struct image_t *output);
+void crop_img(struct image_t *input, struct image_t *output, int w_change, int h_change);
 void divide_img(struct image_t *input, struct image_t *output, int section_w, int section_h, int j);
 void glue_img(struct image_t *input, struct image_t *output, int section_w, int section_h, int j);
 void div_coloring(struct image_t *input, float div_size);

@@ -166,13 +166,11 @@ void image_to_grayscale(struct image_t *input, struct image_t *output)
  * @param[in] *input The input image (Needs to be YUV422)
  * @param[out] *output The output image
  */
-void crop_img(struct image_t *input, struct image_t *output)
+void crop_img(struct image_t *input, struct image_t *output, int w_change, int h_change)
 {  
   // take away 120 pixels from the width and 170 pixels from the heigh
-  int w_change = 120;
-  int h_change = 170;
-  uint16_t new_w = input->w - 120;
-  uint16_t new_h = input->h - 170;
+  uint16_t new_w = input->w - w_change;
+  uint16_t new_h = input->h - h_change;
 
 
   uint8_t *source = input->buf;
@@ -296,6 +294,7 @@ void div_coloring(struct image_t *input, float div)
   float delta_b2w[3] = {0.0, 0.0, 0.0};
   float delta_w2r[3] = {0.0, 0.0, 0.0};  
 
+  div = (div+1.0)/2;
   for(int i=0; i<3; i++) {    
       delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
       delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
@@ -303,6 +302,14 @@ void div_coloring(struct image_t *input, float div)
 
   if (div > 1) {
       printf("Error: Divergence > 1.");
+      YUV_out[0] = 76.0;
+      YUV_out[0] = 84.0;
+      YUV_out[0] = 255.0;
+  }
+  else if (div < 0) {
+      YUV_out[0] = 29.0;
+      YUV_out[0] = 255.0;
+      YUV_out[0] = 107.0;
   }
   else if (div <= 0.5) {
       for(int i=0; i<3; i++) {  

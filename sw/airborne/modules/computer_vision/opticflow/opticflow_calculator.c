@@ -519,12 +519,12 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   struct linear_flow_fit_info fit_info;
 
   // Update FPS for information
-  float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
-  if (dt > 1e-5) {
-    result->fps = 1000.f / dt;
-  } else {
-    return false;
-  }
+  // float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
+  // if (dt > 1e-5) {
+  //   result->fps = 1000.f / dt;
+  // } else {
+  //   return false;
+  // }
 
   // *************************************************************************************
   // Corner detection

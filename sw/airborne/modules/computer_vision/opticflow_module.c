@@ -86,6 +86,7 @@ static pthread_mutex_t opticflow_mutex;                  ///< Mutex lock fo thre
 struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id);     ///< The main optical flow calculation thread
 
 struct image_t cropped_img;
+struct image_t cropped_img_gray;
 struct image_t sections_img_p[NUM_HOR_SEC];
 struct image_t final_img;
 
@@ -198,9 +199,11 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   int index;
   
   image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
+  image_create(&cropped_img_gray, new_w, new_h, IMAGE_YUV422);
   image_create(&final_img, section_w, section_h*NUM_HOR_SEC, IMAGE_YUV422);
 
-  crop_img(img, &cropped_img);
+  crop_img(img, &cropped_img, w_change, h_change);
+  //image_to_grayscale(&cropped_img, &cropped_img_gray);
   
   for (int index=0;index<NUM_HOR_SEC;index++) {
     image_create(&sections_img_p[index], section_w, section_h, IMAGE_YUV422);
@@ -210,7 +213,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     // Do the optical flow calculation
     static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
     bool ret_val = opticflow_calc_frame(&opticflow[camera_id], &sections_img_p[index], &temp_result[camera_id]);
-    if(TRUE){
+    if(ret_val){
       // Copy the result if finished
       pthread_mutex_lock(&opticflow_mutex);
       opticflow_result[camera_id] = temp_result[camera_id];
@@ -223,7 +226,11 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 
       pthread_mutex_unlock(&opticflow_mutex);
       // div_matrix[i][j] = opticflow_result[camera_id].div_size;
-    };
+    }
+    else{
+      div_test[index] = 0;
+      PRINT("Failed Calculation/n/n/n Section: %d, div_size: %f\n", index, div_test[index]);
+    }
   }
   PRINT("-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-\n\n\n");
 
@@ -233,8 +240,8 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   }
 
-  //img = &sections_img_p[0];
-  //img = aux;
+
+  //img = &cropped_img;
   img = &final_img;
   return img;
   }
