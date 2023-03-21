@@ -71,11 +71,17 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 // #endif
 
 #ifndef NUM_HOR_SEC
-#define NUM_HOR_SEC 1      ///< Number of horizontal sections on image to calculate optical flow
+#define NUM_HOR_SEC 3     ///< Number of horizontal sections on image to calculate optical flow
 #endif
+
 
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
+struct opticflow_t opticflow_mav[NUM_HOR_SEC][ACTIVE_CAMERAS];
+struct opticflow_t opticflow_l[ACTIVE_CAMERAS];                         ///< Opticflow calculations
+struct opticflow_t opticflow_c[ACTIVE_CAMERAS];                         ///< Opticflow calculations
+struct opticflow_t opticflow_r[ACTIVE_CAMERAS];                         ///< Opticflow calculations
+
 static struct opticflow_result_t opticflow_result[ACTIVE_CAMERAS];    ///< The opticflow result
 static float div_test[NUM_HOR_SEC]; 
 
@@ -132,6 +138,11 @@ void opticflow_module_init(void)
     //}  
   }
   opticflow_calc_init(opticflow);
+  opticflow_calc_init_mav(opticflow_mav[0], 0);
+  opticflow_calc_init_mav(opticflow_mav[1], 1);
+  opticflow_calc_init_mav(opticflow_mav[2], 2);
+  // opticflow_calc_init(opticflow_r);
+
 
   cv_add_to_device(&OPTICFLOW_CAMERA, opticflow_module_calc, OPTICFLOW_FPS, 0);
 #ifdef OPTICFLOW_CAMERA2
@@ -205,14 +216,31 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   crop_img(img, &cropped_img, w_change, h_change);
   //image_to_grayscale(&cropped_img, &cropped_img_gray);
   
-  for (int index=0;index<NUM_HOR_SEC;index++) {
+  for (index=0;index<NUM_HOR_SEC;index++) {
     image_create(&sections_img_p[index], section_w, section_h, IMAGE_YUV422);
     divide_img(&cropped_img, &sections_img_p[index], section_w, section_h, index);
     // struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
     // img->eulers = pose.eulers;
     // Do the optical flow calculation
+    
     static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
-    bool ret_val = opticflow_calc_frame(&opticflow[camera_id], &sections_img_p[index], &temp_result[camera_id], index);
+    bool ret_val = false;
+    // struct opticflow_t *opticflow_pp_l = &opticflow_l[camera_id];
+    // struct opticflow_t *opticflow_pp_c = &opticflow_c[camera_id];
+    // struct opticflow_t *opticflow_pp_r = &opticflow_r[camera_id];
+    struct opticflow_t *opticflow_pp = &opticflow_mav[index][camera_id];
+
+
+    // if (index ==0){
+    //   opticflow_pp = &opticflow_l[camera_id];
+    // }
+    // else if (index ==1){
+    //   opticflow_pp = &opticflow_c[camera_id];
+    // }
+    // else if (index==2){
+    //   opticflow_pp = &opticflow_r[camera_id];
+    // }
+    ret_val = opticflow_calc_frame(opticflow_pp, &sections_img_p[index], &temp_result[camera_id], index);
     if(ret_val){
       // Copy the result if finished
       pthread_mutex_lock(&opticflow_mutex);
