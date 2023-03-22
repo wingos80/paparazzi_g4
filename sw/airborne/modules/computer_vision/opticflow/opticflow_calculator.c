@@ -50,7 +50,7 @@
 #include BOARD_CONFIG
 
 // whether to show the flow and corners:
-#define OPTICFLOW_SHOW_CORNERS 1
+#define OPTICFLOW_SHOW_CORNERS 0
 
 #define EXHAUSTIVE_FAST 0
 #define ACT_FAST 1
@@ -585,6 +585,7 @@ void opticflow_calc_init_mav(struct opticflow_t opticflow[], int index)
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
                              struct opticflow_result_t *result, int index)
 {
+  //opticflow->max_track_corners = 2;
   if (opticflow->just_switched_method) {
     // Create the image buffers
     image_create(&opticflow->img_gray, img->w, img->h, IMAGE_GRAYSCALE);

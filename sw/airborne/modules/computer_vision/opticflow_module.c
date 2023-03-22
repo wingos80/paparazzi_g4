@@ -74,16 +74,31 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 #define NUM_HOR_SEC 3     ///< Number of horizontal sections on image to calculate optical flow
 #endif
 
+#ifndef NUM_SEC
+#define NUM_SEC NUM_HOR_SEC+NUM_HOR_SEC     ///< Number of horizontal sections on image to calculate optical flow
+#endif 
+
+#ifndef LEFT
+#define LEFT 0     ///< Number of horizontal sections on image to calculate optical flow
+#endif 
+
+#ifndef CENTER
+#define CENTER 0.5  ///< Number of horizontal sections on image to calculate optical flow
+#endif 
+
+#ifndef RIGHT
+#define RIGHT 1     ///< Number of horizontal sections on image to calculate optical flow
+#endif 
 
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
-struct opticflow_t opticflow_mav[NUM_HOR_SEC][ACTIVE_CAMERAS];
+struct opticflow_t opticflow_mav[NUM_SEC][ACTIVE_CAMERAS];
 struct opticflow_t opticflow_l[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 struct opticflow_t opticflow_c[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 struct opticflow_t opticflow_r[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 
 static struct opticflow_result_t opticflow_result[ACTIVE_CAMERAS];    ///< The opticflow result
-static float div_test[NUM_HOR_SEC]; 
+static float flow_y_test[NUM_SEC]; 
 
 static bool opticflow_got_result[ACTIVE_CAMERAS];       ///< When we have an optical flow calculation
 static pthread_mutex_t opticflow_mutex;                  ///< Mutex lock fo thread safety
@@ -94,6 +109,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id);  
 struct image_t cropped_img;
 struct image_t cropped_img_gray;
 struct image_t sections_img_p[NUM_HOR_SEC];
+struct image_t bigger_sections_img_p[NUM_HOR_SEC-1];
 struct image_t final_img;
 
 #if PERIODIC_TELEMETRY
@@ -138,10 +154,11 @@ void opticflow_module_init(void)
     //}  
   }
   opticflow_calc_init(opticflow);
-  opticflow_calc_init_mav(opticflow_mav[0], 0);
-  opticflow_calc_init_mav(opticflow_mav[1], 1);
-  opticflow_calc_init_mav(opticflow_mav[2], 2);
-  // opticflow_calc_init(opticflow_r);
+  for (int index=0; index < NUM_SEC; index++) {
+    opticflow_calc_init_mav(opticflow_mav[index], index);
+    // opticflow_calc_init(opticflow_r);
+  }
+  
 
 
   cv_add_to_device(&OPTICFLOW_CAMERA, opticflow_module_calc, OPTICFLOW_FPS, 0);
@@ -201,45 +218,32 @@ void opticflow_module_run(void)
 struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 {
   // crop the image first - take away 120 pixels from the width and 170 pixels from the heigh
-  int w_change = 120;
-  int h_change = 170;
+  int w_change = 160;
+  int h_change = 200;
   uint16_t new_w = img->w - w_change;
   uint16_t new_h = img->h - h_change;
   int section_h = new_h/NUM_HOR_SEC;  
   int section_w = new_w;
   int index;
   
+  static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
+    
   image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
-  image_create(&cropped_img_gray, new_w, new_h, IMAGE_YUV422);
+  //image_create(&cropped_img_gray, new_w, new_h, IMAGE_YUV422);
   image_create(&final_img, section_w, section_h*NUM_HOR_SEC, IMAGE_YUV422);
 
   crop_img(img, &cropped_img, w_change, h_change);
   //image_to_grayscale(&cropped_img, &cropped_img_gray);
-  
+
+
   for (index=0;index<NUM_HOR_SEC;index++) {
+
     image_create(&sections_img_p[index], section_w, section_h, IMAGE_YUV422);
     divide_img(&cropped_img, &sections_img_p[index], section_w, section_h, index);
-    // struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
-    // img->eulers = pose.eulers;
-    // Do the optical flow calculation
-    
-    static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
-    bool ret_val = false;
-    // struct opticflow_t *opticflow_pp_l = &opticflow_l[camera_id];
-    // struct opticflow_t *opticflow_pp_c = &opticflow_c[camera_id];
-    // struct opticflow_t *opticflow_pp_r = &opticflow_r[camera_id];
+
     struct opticflow_t *opticflow_pp = &opticflow_mav[index][camera_id];
+    bool ret_val = false;
 
-
-    // if (index ==0){
-    //   opticflow_pp = &opticflow_l[camera_id];
-    // }
-    // else if (index ==1){
-    //   opticflow_pp = &opticflow_c[camera_id];
-    // }
-    // else if (index==2){
-    //   opticflow_pp = &opticflow_r[camera_id];
-    // }
     ret_val = opticflow_calc_frame(opticflow_pp, &sections_img_p[index], &temp_result[camera_id], index);
     if(ret_val){
       // Copy the result if finished
@@ -247,8 +251,8 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
       opticflow_result[camera_id] = temp_result[camera_id];
       opticflow_got_result[camera_id] = true;
       
-      div_test[index] = opticflow_result[camera_id].div_size;
-      PRINT("Section: %d, div_size: %f\n", index, div_test[index]);
+      flow_y_test[index] = opticflow_result[camera_id].flow_y;
+      PRINT("Section: %d, flow_y: %f\n", index, flow_y_test[index]);
       // TODO:coloring function to color the section
       // glueing backkkk
 
@@ -256,18 +260,62 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
       // div_matrix[i][j] = opticflow_result[camera_id].div_size;
     }
     else{
-      div_test[index] = 0;
-      PRINT("Failed Calculation/n/n/n Section: %d, div_size: %f\n", index, div_test[index]);
+      flow_y_test[index] = 0;
+      PRINT("Failed Calculation/n/n/n Section: %d, flow_y: %f\n", index, flow_y_test[index]);
     }
   }
-  PRINT("-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-8-\n\n\n");
 
 
+  for (index=0;index<(NUM_HOR_SEC-1);index++){
+    image_create(&bigger_sections_img_p[index], 2*section_w, 2*section_h, IMAGE_YUV422);
+    glue_img(&sections_img_p[index], &bigger_sections_img_p[index], section_w, section_h, index);
+    glue_img(&sections_img_p[index+1], &bigger_sections_img_p[index], section_w, section_h, index);
+
+    struct opticflow_t *opticflow_pp = &opticflow_mav[index+NUM_HOR_SEC][camera_id];
+    bool ret_val = false;
+
+    ret_val = opticflow_calc_frame(opticflow_pp, &bigger_sections_img_p[index], &temp_result[camera_id], NUM_HOR_SEC + index);
+    if(ret_val){
+      // Copy the result if finished
+      pthread_mutex_lock(&opticflow_mutex);
+      opticflow_result[camera_id] = temp_result[camera_id];
+      opticflow_got_result[camera_id] = true;
+      
+      flow_y_test[NUM_HOR_SEC+index] = opticflow_result[camera_id].flow_y;
+      PRINT("Section: %d, flow_y: %f\n", NUM_HOR_SEC + index, flow_y_test[NUM_HOR_SEC+index]);
+      // TODO:coloring function to color the section
+      // glueing backkkk
+
+      pthread_mutex_unlock(&opticflow_mutex);
+      // div_matrix[i][j] = opticflow_result[camera_id].div_size;
+    }
+    else{
+      flow_y_test[index+NUM_HOR_SEC] = 0;
+      PRINT("Failed Calculation/n/n/n Section: %d, flow_y: %f\n", NUM_HOR_SEC + index, flow_y_test[NUM_HOR_SEC+index]);
+    }
+  }
+  
+  // flow_y_test[0] = 0.6*flow_y_test[0] + 0.2*flow_y_test[0 + NUM_HOR_SEC] - 0.2*flow_y_test[1];
+  // flow_y_test[2] = 0.6*flow_y_test[2] + 0.2*flow_y_test[1 + NUM_HOR_SEC] - 0.2*flow_y_test[1];
+  // flow_y_test[1] = 0.6*flow_y_test[1] + 0.2*flow_y_test[0 + NUM_HOR_SEC] + 0.2*flow_y_test[1 + NUM_HOR_SEC] - 0.2*flow_y_test[0] - 0.2*flow_y_test[2];
+
+
+  float turn;
+
+
+  if ((abs(flow_y_test[0]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[2]))) {
+    turn = RIGHT;
+  }
+  else if ((abs(flow_y_test[2]) > abs(flow_y_test[0])) && (abs(flow_y_test[2]) > abs(flow_y_test[1])))
+    turn = LEFT;
+  else {
+    turn = CENTER;
+  }
+  
   for (int index=0;index<NUM_HOR_SEC;index++) {
-    div_coloring(&sections_img_p[index], div_test[index]);
+    div_coloring(&sections_img_p[index], turn);
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   }
-
 
   //img = &cropped_img;
   img = &final_img;
