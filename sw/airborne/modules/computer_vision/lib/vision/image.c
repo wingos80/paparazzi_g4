@@ -34,7 +34,7 @@
 #endif
 
 
-#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+//#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 /**
  * Create a new image
  * @param[out] *img The output image
@@ -195,7 +195,7 @@ void crop_img(struct image_t *input, struct image_t *output, int w_change, int h
       source += 2*w_change;
     }
   } else {
-    PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    //PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
     for (int y = 0; y < new_h * new_w; y++) {
         *dest++ = *source++;    // Y
         source++;
@@ -234,7 +234,7 @@ void divide_img(struct image_t *input, struct image_t *output, int section_w, in
       // source += row_skip;
     }
   } else {
-    PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    //PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
     for (int y = 0; y < section_h * section_w; y++) {
         *dest++ = *source++;    // Y
         source++;
@@ -275,7 +275,7 @@ void glue_img(struct image_t *input, struct image_t *output, int section_w, int 
       // source += row_skip;
     }
   } else {
-    PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    //PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
     for (int y = 0; y < section_h * section_w; y++) {
         *dest++ = *source++;    // Y
         source++;

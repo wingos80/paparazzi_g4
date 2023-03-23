@@ -61,6 +61,9 @@
       <field name="flow_der_y" type="int32_t">The derotated flow calculation in the y direction (in subpixels)</field>
       <field name="quality" type="float"/>
       <field name="size_divergence" type="float">Divergence as determined with the size method (in 1/seconds) with LK, and Divergence (1/seconds) itself with EF</field>
+      <field name="flow_left" type="float">flow on the left part image as calculated by opticflow</field>
+      <field name="flow_center" type="float">flow on the center part image as calculated by opticflow</field>    
+      <field name="flow_right" type="float">flow on the right part image as calculated by opticflow</field> 
     </message>
 
     <message name="VELOCITY_ESTIMATE" id="12">

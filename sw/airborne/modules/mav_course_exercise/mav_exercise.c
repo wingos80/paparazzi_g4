@@ -93,7 +93,11 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             int32_t __attribute__((unused)) flow_der_x,
                             int32_t __attribute__((unused)) flow_der_y,
                             float __attribute__((unused)) quality,
-                            float size_divergence) {
+                            float size_divergence,
+                            float __attribute__((unused)) flow_left,
+                            float __attribute__((unused)) flow_center,
+                            float __attribute__((unused))flow_right) 
+                            {
   size_div = size_divergence;
 }
 

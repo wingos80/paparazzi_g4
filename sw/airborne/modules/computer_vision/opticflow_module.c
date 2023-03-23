@@ -124,6 +124,7 @@ float dive_sizee;
 float flow_x_test;
 float flow_y_center;
 
+
 #if PERIODIC_TELEMETRY
 #include "modules/datalink/telemetry.h"
 /**
@@ -211,7 +212,10 @@ void opticflow_module_run(void)
                              opticflow_result[idx_camera].flow_der_x,
                              opticflow_result[idx_camera].flow_der_y,
                              opticflow_result[idx_camera].noise_measurement,
-                             opticflow_result[idx_camera].div_size);
+                             opticflow_result[idx_camera].div_size,
+                             flow_y_test[0],
+                             flow_y_test[1],
+                             flow_y_test[2]);
       //TODO Find an appropriate quality measure for the noise model in the state filter, for now it is tracked_cnt
       if (opticflow_result[idx_camera].noise_measurement < 0.8) {
         AbiSendMsgVELOCITY_ESTIMATE(VEL_OPTICFLOW_ID + idx_camera, now_ts,
@@ -342,7 +346,6 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   // } else{
   //   turn = CENTER;
   // }
-
 
 
 
