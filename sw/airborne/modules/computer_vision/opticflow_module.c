@@ -295,23 +295,28 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     }
   }
   
-  // flow_y_test[0] = 0.6*flow_y_test[0] + 0.2*flow_y_test[0 + NUM_HOR_SEC] - 0.2*flow_y_test[1];
-  // flow_y_test[2] = 0.6*flow_y_test[2] + 0.2*flow_y_test[1 + NUM_HOR_SEC] - 0.2*flow_y_test[1];
-  // flow_y_test[1] = 0.6*flow_y_test[1] + 0.2*flow_y_test[0 + NUM_HOR_SEC] + 0.2*flow_y_test[1 + NUM_HOR_SEC] - 0.2*flow_y_test[0] - 0.2*flow_y_test[2];
+  // flow_y_test[0] = flow_y_test[0] + flow_y_test[0 + NUM_HOR_SEC] - flow_y_test[1];
+  // flow_y_test[2] = flow_y_test[2] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[1];
+  // flow_y_test[1] = flow_y_test[1] + flow_y_test[0 + NUM_HOR_SEC] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[0] - flow_y_test[2];
 
 
   float turn;
 
 
-  if ((abs(flow_y_test[0]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[2]))) {
+
+  // if ((abs(flow_y_test[2]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[1]))) {
+  //   turn = CENTER;
+  // }
+  if ((abs(flow_y_test[2]) > abs(flow_y_test[0])) && (abs(flow_y_test[2]) > abs(flow_y_test[1]))) {
+    turn = LEFT;
+  }
+  else if ((abs(flow_y_test[0]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[2]))) {
     turn = RIGHT;
   }
-  else if ((abs(flow_y_test[2]) > abs(flow_y_test[0])) && (abs(flow_y_test[2]) > abs(flow_y_test[1])))
-    turn = LEFT;
   else {
     turn = CENTER;
   }
-  
+
   for (int index=0;index<NUM_HOR_SEC;index++) {
     div_coloring(&sections_img_p[index], turn);
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
