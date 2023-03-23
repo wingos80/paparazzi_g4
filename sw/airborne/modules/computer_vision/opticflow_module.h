@@ -38,6 +38,8 @@ extern struct opticflow_t opticflow[];
 extern struct opticflow_t opticflow_l[];
 extern struct opticflow_t opticflow_c[];
 extern struct opticflow_t opticflow_r[];
+extern float constt;
+extern float gradi;
 
 // Module functions
 extern void opticflow_module_init(void);

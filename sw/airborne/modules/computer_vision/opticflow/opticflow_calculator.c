@@ -614,12 +614,12 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
 
   // Update FPS for information
   float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
-  PRINT("frame time : %f\n", dt);
-  PRINT("INDEX: %d", index);
+  // PRINT("frame time : %f\n", dt);
+  // PRINT("INDEX: %d", index);
   if (dt > 1e-5) {
     result->fps = 1000.f / dt;
   } else {
-    PRINT("FAILED AT FRAME TIME\n");
+    // PRINT("FAILED AT FRAME TIME\n");
     return false;
   }
 
@@ -691,7 +691,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->divergence = 0;
     result->noise_measurement = 5.0;
     
-    PRINT("FAILED AT CORNER CNT\n");
+    // PRINT("FAILED AT CORNER CNT\n");
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
     return false;
   }
@@ -793,7 +793,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->flow_y = 0;
 
     free(vectors);
-    PRINT("FAILED AT TRACKED CNT\n");
+    // PRINT("FAILED AT TRACKED CNT\n");
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
     return false;
   } else if (result->tracked_cnt % 2) {
