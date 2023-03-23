@@ -67,7 +67,6 @@ int32_t floor_centroid = 0;             // floor detector centroid in y directio
 float avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
 int16_t obstacle_free_confidence = 2;   // a measure of how certain we are that the way ahead is safe.
 float moveDistance = 2;                 // waypoint displacement [m]
-float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 20.f;
 //float heading_increment = 20.f;
 uint32_t now_ts;
@@ -155,17 +154,13 @@ void mav_exercise_periodic(void) {
 
 
   PRINT("Confidence: %f \n", obstacle_free_confidence);
-/* 
+
   if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
     PRINT("Confidence_if: %f \n", obstacle_free_confidence);
     navigation_state = SEARCH_FOR_SAFE_HEADING;
     obstacle_free_confidence = 0;
     return;
-  } */
- 
-  PRINT("Confidence_if: %f \n", obstacle_free_confidence);
-  navigation_state = SEARCH_FOR_SAFE_HEADING;
-  obstacle_free_confidence = 0;
+  } 
   
   // compute current color thresholds
   // front_camera defined in airframe xml, with the video_capture module
@@ -190,17 +185,20 @@ void mav_exercise_periodic(void) {
 
   // bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
-  float speed_sp = fminf(oag_max_speed, 0.6f*obstacle_free_confidence);
+  float speed_sp = 2;//fminf(oag_max_speed, 0.6f*obstacle_free_confidence);
 
   switch (navigation_state) {
     case SAFE:
-       if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+      PRINT("In SAFE mode");
+        if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
         navigation_state = OUT_OF_BOUNDS;
       } else if (obstacle_free_confidence == 0){
         navigation_state = OBSTACLE_FOUND;
       } else {
+        PRINT("Should fly");
         guidance_h_set_body_vel(speed_sp, 0);
-        
+        PRINT("Should fly");
+        guidance_h_set_body_vel(speed_sp, 0);
       }
       break;
 
