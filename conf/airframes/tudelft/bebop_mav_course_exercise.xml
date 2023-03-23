@@ -22,7 +22,7 @@
       <module name="fdm" type="gazebo"/>
       <define name="VIDEO_CAPTURE_PATH" value="/tmp/paparazzi/images"/>
       <define name="LOGGER_FILE_PATH" value="/tmp/paparazzi/log"/>
-      
+
       <!-- Detect orange -->
       <define name="COLOR_OBJECT_DETECTOR_LUM_MIN1" value="41"/>
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX1" value="183"/>
@@ -32,8 +32,7 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
     </target>
     
-    <define name="ARRIVED_AT_WAYPOINT" value="0.5"/><!-- Detect arrival at waypoint when within 0.5m -->
-
+    
   <!-- Subsystem section -->
     <module name="telemetry" type="transparent_udp"/>
     <module name="radio_control" type="datalink"/>
@@ -65,6 +64,15 @@
       <define name="COLOR_OBJECT_DETECTOR_CAMERA1" value="front_camera"/>
       <define name="COLOR_OBJECT_DETECTOR_FPS1" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_DRAW1" value="1"/>
+
+            
+      <define name="COLOR_OBJECT_DETECTOR_CAMERA2" value="front_camera"/>
+      <define name="COLOR_OBJECT_DETECTOR_FPS2" value="0"/>
+      <define name="COLOR_OBJECT_DETECTOR_DRAW2" value="1"/>
+    </module>
+    <module name="orange_avoider_guided">
+      <define name="ORANGE_AVOIDER_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION1_ID"/>
+      <define name="FLOOR_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION2_ID"/>
     </module>
     <module name="cv_opticflow">
       <define name="OPTICFLOW_CAMERA" value="front_camera"/>

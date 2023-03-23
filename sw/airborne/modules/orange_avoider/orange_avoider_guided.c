@@ -33,8 +33,6 @@
 #include <stdio.h>
 #include <time.h>
 
-
-
 #define ORANGE_AVOIDER_VERBOSE TRUE
 
 #define PRINT(string,...) fprintf(stderr, "[orange_avoider_guided->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
@@ -44,8 +42,7 @@
 #define VERBOSE_PRINT(...)
 #endif
 
-
-float RotateCenterArena(void);
+uint8_t chooseRandomIncrementAvoidance(void);
 
 enum navigation_state_t {
   SAFE,
@@ -56,29 +53,23 @@ enum navigation_state_t {
 };
 
 // define settings
-float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
-float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
-float oag_max_speed = 0.5f;               // max flight speed [m/s]
+float oag_color_count_frac_orange_av = 0.18f;       // obstacle detection threshold as a fraction of total of image
+float oag_floor_count_frac_orange_av = 0.05f;       // floor detection threshold as a fraction of total of image
+float oag_max_speed_orange_av = 0.5f;               // max flight speed [m/s]
+float oag_heading_rate_orange_av = RadOfDeg(20.f);  // heading change setpoint for avoidance [rad/s]
 
 // define and initialise global variables
-enum navigation_state_t navigation_state = SAFE;   // current state in state machine
-int32_t color_count = 0;                // orange color count from color filter for obstacle detection
-int32_t floor_count = 0;                // green color count from color filter for floor detection
-int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
-float avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
-int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead if safe.
-int16_t mode_direction = 1;
-float incrementDegreesRate = 45.f;
-float RadToCenter = 0.f;
-float x_init = 0.f;
-float y_init = 0.f;
+enum navigation_state_t navigation_state_orange_av = SEARCH_FOR_SAFE_HEADING;   // current state in state machine
+int32_t  color_count_orange_av = 0;                // orange color count from color filter for obstacle detection
+int32_t  floor_count_orange_av = 0;                // green color count from color filter for floor detection
+int32_t  floor_centroid_orange_av = 0;             // floor detector centroid in y direction (along the horizon)
+float  avoidance_heading_direction_orange_av = 0;  // heading change direction for avoidance [rad/s]
+int16_t  obstacle_free_confidence_orange_av = 0;   // a measure of how certain we are that the way ahead if safe.
 
-
-const int16_t max_trajectory_confidence = 5;  // number of consecutive negative object detections to be sure we are obstacle free
+const int16_t max_trajectory_confidence_orange_av = 5;  // number of consecutive negative object detections to be sure */ we are obstacle free
 
 // This call back will be used to receive the color count from the orange detector
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
-//#define ORANGE_AVOIDER_VISUAL_DETECTION_ID COLOR_OBJECT_DETECTION1_ID
 #error This module requires two color filters, as such you have to define ORANGE_AVOIDER_VISUAL_DETECTION_ID to the orange filter
 #error Please define ORANGE_AVOIDER_VISUAL_DETECTION_ID to be COLOR_OBJECT_DETECTION1_ID or COLOR_OBJECT_DETECTION2_ID in your airframe
 #endif
@@ -88,7 +79,7 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
                                int32_t quality, int16_t __attribute__((unused)) extra)
 {
-  color_count = quality;
+  color_count_orange_av = quality;
 }
 
 #ifndef FLOOR_VISUAL_DETECTION_ID
@@ -101,8 +92,8 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
                                int32_t quality, int16_t __attribute__((unused)) extra)
 {
-  floor_count = quality;
-  floor_centroid = pixel_y;
+  floor_count_orange_av = quality;
+  floor_centroid_orange_av = pixel_y;
 }
 
 /*
@@ -112,9 +103,7 @@ void orange_avoider_guided_init(void)
 {
   // Initialise random values
   srand(time(NULL));
-  //chooseAvoidanceDirection();
-  x_init = stateGetPositionEnu_i()->x;
-  y_init = stateGetPositionEnu_i()->y;
+  chooseRandomIncrementAvoidance();
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -128,82 +117,83 @@ void orange_avoider_guided_periodic(void)
 {
   // Only run the mudule if we are in the correct flight mode
   if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
-    navigation_state = SEARCH_FOR_SAFE_HEADING;
-    obstacle_free_confidence = 0;
+    navigation_state_orange_av = SEARCH_FOR_SAFE_HEADING;
+    obstacle_free_confidence_orange_av = 0;
     return;
   }
 
   // compute current color thresholds
-  int32_t color_count_threshold = oag_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-  int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-  float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
+  int32_t color_count_threshold = oag_color_count_frac_orange_av * front_camera.output_size.w * front_camera.output_size.h;
+  int32_t floor_count_threshold = oag_floor_count_frac_orange_av * front_camera.output_size.w * front_camera.output_size.h;
+  float floor_centroid_frac = floor_centroid_orange_av / (float)front_camera.output_size.h / 2.f;
 
-  VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  VERBOSE_PRINT("Floor count: %d, threshold: %d\n", floor_count, floor_count_threshold);
+  VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count_orange_av, color_count_threshold, navigation_state_orange_av);
+  VERBOSE_PRINT("Floor count: %d, threshold: %d\n", floor_count_orange_av, floor_count_threshold);
   VERBOSE_PRINT("Floor centroid: %f\n", floor_centroid_frac);
 
   // update our safe confidence using color threshold
-  if(color_count < color_count_threshold){
-    obstacle_free_confidence++;
+  if(color_count_orange_av < color_count_threshold){
+    obstacle_free_confidence_orange_av++;
   } else {
-    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+    obstacle_free_confidence_orange_av -= 2;  // be more cautious with positive obstacle detections
   }
 
-  // bound obstacle_free_confidence
-  Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
+  // bound obstacle_free_confidence_orange_av
+  Bound(obstacle_free_confidence_orange_av, 0, max_trajectory_confidence_orange_av);
 
-  float speed_sp = fminf(oag_max_speed, 0.6f * obstacle_free_confidence);
-  
+  float speed_sp = fminf(oag_max_speed_orange_av, 0.2f * obstacle_free_confidence_orange_av);
 
-  switch (navigation_state){
+  switch (navigation_state_orange_av){
     case SAFE:
-      if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0){
-        navigation_state = OBSTACLE_FOUND;
+      if (floor_count_orange_av < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+        navigation_state_orange_av = OUT_OF_BOUNDS;
+      } else if (obstacle_free_confidence_orange_av == 0){
+        navigation_state_orange_av = OBSTACLE_FOUND;
       } else {
         guidance_h_set_body_vel(speed_sp, 0);
-        
       }
-      break;
 
+      break;
     case OBSTACLE_FOUND:
       // stop
       guidance_h_set_body_vel(0, 0);
-      // select new search direction based on optic flow divergence - to be implemented
-      //chooseAvoidanceDirection();
-      navigation_state = SEARCH_FOR_SAFE_HEADING;
-      break;
 
+      // randomly select new search direction
+      chooseRandomIncrementAvoidance();
+
+      navigation_state_orange_av = SEARCH_FOR_SAFE_HEADING;
+
+      break;
     case SEARCH_FOR_SAFE_HEADING:
-      guidance_h_set_heading_rate(RotateCenterArena() * RadOfDeg(incrementDegreesRate));
+      guidance_h_set_heading_rate(avoidance_heading_direction_orange_av * oag_heading_rate_orange_av);
+
       // make sure we have a couple of good readings before declaring the way safe
-      if (obstacle_free_confidence >= 2){ 
+      if (obstacle_free_confidence_orange_av >= 2){
         guidance_h_set_heading(stateGetNedToBodyEulers_f()->psi);
-        //guidance_h_set_heading(new_heading);
-        navigation_state = SAFE;
+        navigation_state_orange_av = SAFE;
       }
       break;
     case OUT_OF_BOUNDS:
       // stop
-      guidance_h_set_body_vel(0.05, 0.1*RotateCenterArena());
+      guidance_h_set_body_vel(0, 0);
 
       // start turn back into arena
-      guidance_h_set_heading_rate(RotateCenterArena() * RadOfDeg(incrementDegreesRate));
-      VERBOSE_PRINT("!!!!!!!!!!!!!!OUT OF BOUNDS!!!!!!!!!!!!!!!!!!!!!! \n");
-      navigation_state = REENTER_ARENA;
+      guidance_h_set_heading_rate(avoidance_heading_direction_orange_av * RadOfDeg(15));
+
+      navigation_state_orange_av = REENTER_ARENA;
 
       break;
     case REENTER_ARENA:
       // force floor center to opposite side of turn to head back into arena
-      if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
+      if (floor_count_orange_av >= floor_count_threshold && avoidance_heading_direction_orange_av * floor_centroid_frac >= 0.f){
         // return to heading mode
         guidance_h_set_heading(stateGetNedToBodyEulers_f()->psi);
+
         // reset safe counter
-        obstacle_free_confidence = 0;
+        obstacle_free_confidence_orange_av = 0;
 
         // ensure direction is safe before continuing
-        navigation_state = SAFE;
+        navigation_state_orange_av = SAFE;
       }
       break;
     default:
@@ -212,61 +202,18 @@ void orange_avoider_guided_periodic(void)
   return;
 }
 
-
-
 /*
- * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
+ * Sets the variable 'incrementForAvoidance' randomly positive/negative
  */
-//float RotateCenterArena(float *new_heading, float *incrementDegreesRate){
-float RotateCenterArena(void){
-
-  // alpha - angle between reference heading and current position regarding starting point
-  
-
-  float delta_x = (stateGetPositionEnu_i()->x - x_init);
-  float delta_y = (stateGetPositionEnu_i()->y - y_init);
-
-  float alpha = atan(delta_x/delta_y);
-
-  if (delta_y > 0){
-    if (delta_x >0){
-      if (stateGetNedToBodyEulers_f()->psi > alpha){
-        avoidance_heading_direction = 1.f;
-      } else{
-        avoidance_heading_direction = -1.f;
-      }
-    } else{
-        if (stateGetNedToBodyEulers_f()->psi < alpha){
-          avoidance_heading_direction = -1.f;
-        }
-        else {
-          avoidance_heading_direction = 1.f;
-        }
-    }
+uint8_t chooseRandomIncrementAvoidance(void)
+{
+  // Randomly choose CW or CCW avoiding direction
+  if (rand() % 2 == 0) {
+    avoidance_heading_direction_orange_av = 1.f;
+    VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction_orange_av * oag_heading_rate_orange_av);
   } else {
-    if (delta_x < 0){
-      if ((3.14159 + stateGetNedToBodyEulers_f()->psi) > alpha){
-        avoidance_heading_direction = 1.f;
-      } else{
-        avoidance_heading_direction = -1.f;
-      }
-    } else{
-      if ((3.14159 + stateGetNedToBodyEulers_f()->psi) > -alpha){
-        avoidance_heading_direction = -1.f;
-      }
-      else{
-        avoidance_heading_direction = 1.f;
-      }
-    }
+    avoidance_heading_direction_orange_av = -1.f;
+    VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction_orange_av * oag_heading_rate_orange_av);
   }
-
-return avoidance_heading_direction;
+  return false;
 }
-
-
-
-
-
-
-
-
