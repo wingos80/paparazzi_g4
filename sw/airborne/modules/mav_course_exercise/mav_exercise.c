@@ -36,11 +36,11 @@
 
 #define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
-/* uint8_t increase_nav_heading(float incrementDegrees);
+uint8_t increase_nav_heading(float incrementDegrees);
 uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 uint8_t choose20degreesIncrementAvoidance(void);
- */
+
 
 float RotateCenterArena(void);
 
@@ -61,11 +61,11 @@ float oag_max_speed = 0.5f;               // max flight speed [m/s]
 
 // define and initialise global variables
 enum navigation_state_t navigation_state = SAFE;
-/* int32_t */ color_count = 0;               // orange color count from color filter for obstacle detection
-/* int32_t */ floor_count = 0;                // green color count from color filter for floor detection
-/* int32_t  */floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
-/* float */ avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
-/* int16_t */ obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
+int32_t color_count = 0;               // orange color count from color filter for obstacle detection
+int32_t floor_count = 0;                // green color count from color filter for floor detection
+int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
+float avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
+int16_t obstacle_free_confidence = 2;   // a measure of how certain we are that the way ahead is safe.
 float moveDistance = 2;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 20.f;
@@ -151,28 +151,37 @@ void mav_exercise_init(void) {
 
 void mav_exercise_periodic(void) {
   // only evaluate our state machine if we are flying
-  if (!autopilot_in_flight()) {
-    return;
-  }
 
+
+
+  PRINT("Confidence: %f \n", obstacle_free_confidence);
+/* 
   if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
+    PRINT("Confidence_if: %f \n", obstacle_free_confidence);
     navigation_state = SEARCH_FOR_SAFE_HEADING;
     obstacle_free_confidence = 0;
     return;
-  }
-
+  } */
+ 
+  PRINT("Confidence_if: %f \n", obstacle_free_confidence);
+  navigation_state = SEARCH_FOR_SAFE_HEADING;
+  obstacle_free_confidence = 0;
+  
   // compute current color thresholds
   // front_camera defined in airframe xml, with the video_capture module
+  int32_t color_count_threshold = oag_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
   int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
   float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
 
   PRINT("Floor count: %d, threshold: %d\n", floor_count, floor_count_threshold);
   PRINT("Floor centroid: %f\n", floor_centroid_frac);
   PRINT("Divergence_count: %f  Divergence_threshold: %f \n", optical_flow_count, DIVERGENCE_TRESHHOLD);
-
+  PRINT("Confidence: %f \n", obstacle_free_confidence);
 
   // update our safe confidence using color threshold
-  if (optical_flow_count < DIVERGENCE_TRESHHOLD ) {
+ /*  if (optical_flow_count < DIVERGENCE_TRESHHOLD ) {
+    obstacle_free_confidence++; */
+  if (color_count < color_count_threshold){
     obstacle_free_confidence++;
   } else {
     obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
