@@ -57,7 +57,7 @@ enum navigation_state_t {
 
 // define settings
 float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
-float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
+float oag_floor_count_frac = 0.01f;       // floor detection threshold as a fraction of total of image
 float oag_max_speed = 0.5f;               // max flight speed [m/s]
 
 // define and initialise global variables
@@ -153,12 +153,12 @@ void orange_avoider_guided_periodic(void)
   // bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
-  float speed_sp = fminf(oag_max_speed, 0.6f * obstacle_free_confidence);
+  float speed_sp = fminf(oag_max_speed, 0.3f * obstacle_free_confidence);  // change velocity here
   
 
   switch (navigation_state){
     case SAFE:
-      if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+      if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.33){ // change upper bound of fabsf(floor_centroid_frac) for the drone to get closer to the edge before turning (higher bound = goes closer to the edge)
         navigation_state = OUT_OF_BOUNDS;
       } else if (obstacle_free_confidence == 0){
         navigation_state = OBSTACLE_FOUND;
@@ -199,7 +199,8 @@ void orange_avoider_guided_periodic(void)
       // force floor center to opposite side of turn to head back into arena
       if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
         // return to heading mode
-        guidance_h_set_heading(stateGetNedToBodyEulers_f()->psi);
+        float test_heading = stateGetNedToBodyEulers_f()->psi + RotateCenterArena()*(3.14/4);
+        guidance_h_set_heading(test_heading);
         // reset safe counter
         obstacle_free_confidence = 0;
 
