@@ -330,6 +330,7 @@ void div_coloring(struct image_t *input, float val)
   float YUV_blue[3] = {29.0, 255.0, 107.0};
   float YUV_white[3] = {255.0, 128.0, 128.0};
   float YUV_red[3] = {76.0, 84.0, 255.0};
+  float YUV_green[3] = {171.0, 60.0, 72.0};
   float YUV_out[3] = {0.0, 0.0, 0.0};
   float delta_b2w[3] = {0.0, 0.0, 0.0};
   float delta_w2r[3] = {0.0, 0.0, 0.0};  
@@ -340,12 +341,12 @@ void div_coloring(struct image_t *input, float val)
       delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
   }
 
-  if (val> 1) {
-      YUV_out[0] = 76.0;
-      YUV_out[0] = 84.0;
-      YUV_out[0] = 255.0;
+  if (val == 1.5) {
+    for(int i=0; i<3; i++) {  
+          YUV_out[i] = YUV_green[i];
+      }
   }
-  else if (val < 0) {
+  else if (val < -1) {
       YUV_out[0] = 29.0;
       YUV_out[0] = 255.0;
       YUV_out[0] = 107.0;

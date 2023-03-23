@@ -90,6 +90,10 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 #define RIGHT 1     ///< Number of horizontal sections on image to calculate optical flow
 #endif 
 
+#ifndef ROTATE90
+#define ROTATE90 0.75     ///< Number of horizontal sections on image to calculate optical flow
+#endif
+
 /* The main opticflow variables */
 struct opticflow_t opticflow[ACTIVE_CAMERAS];                         ///< Opticflow calculations
 struct opticflow_t opticflow_mav[NUM_SEC][ACTIVE_CAMERAS];
@@ -117,6 +121,8 @@ float constt = 0.0;
 float gradi = 2.0;
 float divergencee;
 float dive_sizee;
+float flow_x_test;
+float flow_y_center;
 
 #if PERIODIC_TELEMETRY
 #include "modules/datalink/telemetry.h"
@@ -130,26 +136,26 @@ static void opticflow_telem_send(struct transport_tx *trans, struct link_device 
   pthread_mutex_lock(&opticflow_mutex);
   for (int idx_camera = 0; idx_camera < ACTIVE_CAMERAS; idx_camera++) {
     if (opticflow_result[idx_camera].noise_measurement < 0.8) {
-      // pprz_msg_send_OPTIC_FLOW_EST(trans, dev, AC_ID,
-      //                              &opticflow_result[idx_camera].fps, &opticflow_result[idx_camera].corner_cnt,
-      //                              &opticflow_result[idx_camera].tracked_cnt, &opticflow_result[idx_camera].flow_x,
-      //                              &opticflow_result[idx_camera].flow_y, &opticflow_result[idx_camera].flow_der_x,
-      //                              &opticflow_result[idx_camera].flow_der_y, &opticflow_result[idx_camera].vel_body.x,
-      //                              &opticflow_result[idx_camera].vel_body.y, &opticflow_result[idx_camera].vel_body.z,
-      //                              &opticflow_result[idx_camera].div_size,
-      //                              &opticflow_result[idx_camera].surface_roughness,
-      //                              &opticflow_result[idx_camera].divergence,
-      //                              &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
       pprz_msg_send_OPTIC_FLOW_EST(trans, dev, AC_ID,
                                    &opticflow_result[idx_camera].fps, &opticflow_result[idx_camera].corner_cnt,
                                    &opticflow_result[idx_camera].tracked_cnt, &opticflow_result[idx_camera].flow_x,
                                    &opticflow_result[idx_camera].flow_y, &opticflow_result[idx_camera].flow_der_x,
                                    &opticflow_result[idx_camera].flow_der_y, &opticflow_result[idx_camera].vel_body.x,
                                    &opticflow_result[idx_camera].vel_body.y, &opticflow_result[idx_camera].vel_body.z,
-                                   &dive_sizee,
-                                   &ttc,
-                                   &divergencee,
+                                   &opticflow_result[idx_camera].div_size,
+                                   &opticflow_result[idx_camera].surface_roughness,
+                                   &opticflow_result[idx_camera].divergence,
                                    &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
+      // pprz_msg_send_OPTIC_FLOW_EST(trans, dev, AC_ID,
+      //                              &opticflow_result[idx_camera].fps, &opticflow_result[idx_camera].corner_cnt,
+      //                              &opticflow_result[idx_camera].tracked_cnt, &opticflow_result[idx_camera].flow_x,
+      //                              &opticflow_result[idx_camera].flow_y, &opticflow_result[idx_camera].flow_der_x,
+      //                              &opticflow_result[idx_camera].flow_der_y, &opticflow_result[idx_camera].vel_body.x,
+      //                              &opticflow_result[idx_camera].vel_body.y, &opticflow_result[idx_camera].vel_body.z,
+      //                              &flow_y_center,
+      //                              &flow_x_test,
+      //                              &divergencee,
+      //                              &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
     }
   }
   pthread_mutex_unlock(&opticflow_mutex);
@@ -244,7 +250,6 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   bool ret_val = false;
   float temp_div_size = 0.0001; 
   float time_threshold = 0.5;
-  float flow_x_test;
   
   static struct opticflow_result_t temp_result[ACTIVE_CAMERAS]; // static so that the number of corners is kept between frames
     
@@ -273,9 +278,10 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
       flow_y_test[index] = opticflow_result[camera_id].flow_y;
       if (index == 1){
         flow_x_test = temp_result[camera_id].flow_x;
-        divergencee = temp_result[camera_id].divergence;
-        dive_sizee = temp_result[camera_id].div_size;
-        ttc = 1.0/(gradi*abs(divergencee)+ constt);
+        //flow_y_center = flow_y_test[index];
+        //divergencee = temp_result[camera_id].divergence;
+        //dive_sizee = temp_result[camera_id].div_size;
+        //ttc = 1.0/(gradi*abs(divergencee)+ constt);
       }
       PRINT("Section: %d, flow_y: %f\n", index, flow_y_test[index]);
 
@@ -318,39 +324,53 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   // flow_y_test[0] = flow_y_test[0] + flow_y_test[0 + NUM_HOR_SEC] - flow_y_test[1];
   // flow_y_test[2] = flow_y_test[2] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[1];
   //flow_y_test[1] = flow_y_test[1] + flow_y_test[0 + NUM_HOR_SEC] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[0] - flow_y_test[2];
-  // flow_y_test[1] = 3*flow_y_test[1];
+  flow_y_test[1] = 3*flow_y_test[1];
 
 
   float turn;
   
-  // compute time to contact
-  PRINT("time to contact: %f\n", ttc);
-  // time to contact colouring
-  if (0.0 < ttc < time_threshold){
-    if ((abs(flow_y_test[2]) < abs(flow_y_test[0]))){
-    turn = RIGHT;
-  }
-    else {
-      turn = LEFT;
-    }
-  } else{
-    turn = CENTER;
-  }
-
-
-
-
-  // // leo's
-  // if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
+  // // compute time to contact
+  // PRINT("time to contact: %f\n", ttc);
+  // // time to contact colouring
+  // if (0.0 < ttc < time_threshold){
+  //   if ((abs(flow_y_test[2]) < abs(flow_y_test[0]))){
   //   turn = RIGHT;
   // }
-  // else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
-  //   turn = LEFT;
-  // }
-  // else {
+  //   else {
+  //     turn = LEFT;
+  //   }
+  // } else{
   //   turn = CENTER;
   // }
 
+
+
+
+  // leo's
+  if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
+    turn = RIGHT;
+    PRINT("Decison: Turn Right");
+  }
+  else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
+    turn = LEFT;
+    PRINT("Decison: Turn Left");
+  }
+  else {
+    if (abs(flow_y_test[1]) > 80){
+      turn = 1.5;
+      PRINT("Decison: Rotate 90");
+    }
+    else {
+      turn = CENTER;
+      PRINT("Decison: Stay Center");
+    }
+  }
+
+  // if (turn = CENTER) {
+  //   if (abs(flow_y_test[1]) > 100){
+  //     turn = 1.5;
+  //   }
+  // }
   // // if ((abs(flow_y_test[2]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[1]))) {
   // //   turn = CENTER;
   // // }
