@@ -297,25 +297,35 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   
   // flow_y_test[0] = flow_y_test[0] + flow_y_test[0 + NUM_HOR_SEC] - flow_y_test[1];
   // flow_y_test[2] = flow_y_test[2] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[1];
-  // flow_y_test[1] = flow_y_test[1] + flow_y_test[0 + NUM_HOR_SEC] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[0] - flow_y_test[2];
+  //flow_y_test[1] = flow_y_test[1] + flow_y_test[0 + NUM_HOR_SEC] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[0] - flow_y_test[2];
+  flow_y_test[1] = 3*flow_y_test[1];
 
 
   float turn;
 
 
-
-  // if ((abs(flow_y_test[2]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[1]))) {
-  //   turn = CENTER;
-  // }
-  if ((abs(flow_y_test[2]) > abs(flow_y_test[0])) && (abs(flow_y_test[2]) > abs(flow_y_test[1]))) {
-    turn = LEFT;
-  }
-  else if ((abs(flow_y_test[0]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[2]))) {
+  if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
     turn = RIGHT;
+  }
+  else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
+    turn = LEFT;
   }
   else {
     turn = CENTER;
   }
+
+  // if ((abs(flow_y_test[2]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[1]))) {
+  //   turn = CENTER;
+  // }
+  // else if ((abs(flow_y_test[2]) > abs(flow_y_test[0])) && (abs(flow_y_test[2]) > abs(flow_y_test[1]))) {
+  //   turn = LEFT;
+  // }
+  // else if ((abs(flow_y_test[0]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[2]))) {
+  //   turn = RIGHT;
+  // }
+  // else {
+  //   turn = CENTER;
+  //}
 
   for (int index=0;index<NUM_HOR_SEC;index++) {
     div_coloring(&sections_img_p[index], turn);
