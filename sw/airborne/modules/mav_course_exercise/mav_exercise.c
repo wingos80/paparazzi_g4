@@ -26,6 +26,7 @@
 #include "autopilot_static.h"
 #include <stdio.h>
 #include <time.h>
+//#include "modules/computer_vision/opticflow_module.h"
      
 #define NAV_C // needed to get the nav functions like Inside...
 #include "generated/flight_plan.h"
@@ -50,20 +51,21 @@ enum navigation_state_t {
 
 // define and initialise global variables
 float oa_color_count_frac = 0.18f;
-enum navigation_state_t navigation_state = SEARCH_FOR_SAFE_HEADING;
+enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
 float moveDistance = 2;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
-float heading_increment = 15.f;
-float turn_around_increment = 45.f;
+float heading_increment = 10.f;
+float turn_around_increment = 40.f;
 uint32_t now_ts;
 float divergence_threshold = 0.3f;
 float size_div = 0;
 int counter = 0;
 int counter_threshold = 4;
+float total_flow = 0;
 
   
 int test = 1;
@@ -137,7 +139,6 @@ void mav_exercise_periodic(void) {
   if (!autopilot_in_flight()) {
     return;
   }
-
   // compute current color thresholds
   // front_camera defined in airframe xml, with the video_capture module
   //int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
@@ -239,42 +240,52 @@ void mav_exercise_periodic(void) {
 
   //Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
-  moveDistance = fminf(1, 1);
+  PRINT("Flow left: %f\n\n", flow_left_mav);
+  PRINT("Flow right: %f\n\n", flow_right_mav);
+  PRINT("Flow center: %f\n\n", flow_center_mav);
 
+
+
+  //moveDistance = fminf(1.0, 1.0);
+
+  total_flow = fabs(flow_left_mav) + fabs(flow_right_mav) + fabs(flow_center_mav);
+  
   switch (navigation_state){
     case SAFE:
       counter =0;
+      moveDistance = 1.0;
       PRINT("\n\n\nSAFE\n\n\n");
-      if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
+      if (total_flow >= 100){
+        if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
         turn_left += 2;
         turn_right -=1;
         stay_center -=1;
-        rotate_90 -=1;
+        rotate_90 -=2;
         //PRINT("Decison: Turn Left");
-      }
-      else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
+        }
+        else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
         turn_right += 2;
         turn_left -=1;
         stay_center -=1;
-        rotate_90 -=1;
+        rotate_90 -=2;
         //PRINT("Decison: Turn Right");
-      }
-      else {
-        if (fabs(flow_center_mav) > 80){
-          rotate_90 +=3;
+        }
+        else if (fabs(flow_center_mav) > 200){
+          rotate_90 +=2;
           turn_right -= 1;
           turn_left -=1;
           stay_center -=1;
           //PRINT("Decison: Rotate 90");
         }
-        else {
-          stay_center +=2;
-          rotate_90 -=1;
-          turn_right -= 1;
-          turn_left -=1;
-          //PRINT("Decison: Stay Center");
-        }
       }
+      else {
+        stay_center +=2;
+        rotate_90 -=1;
+        turn_right -= 1;
+        turn_left -=1;
+        //PRINT("Decison: Stay Center");
+        }
+      
 
       Bound(turn_left, 0, 14);
       Bound(turn_right, 0, 14);
@@ -290,7 +301,7 @@ void mav_exercise_periodic(void) {
       moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         navigation_state = OUT_OF_BOUNDS;
-      } else if (turn >= stay_center && turn >= 7){
+      } else if (turn >= stay_center && turn >= 8){
         navigation_state = OBSTACLE_FOUND;
       } else {
         moveWaypointForward(WP_GOAL, moveDistance);
@@ -299,8 +310,10 @@ void mav_exercise_periodic(void) {
       break;
     case OBSTACLE_FOUND:
       // stop
+      PRINT("\n\n\nObstacle Found\n\n\n");
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
+      moveDistance = 0.0;
 
       if (turn == turn_left) {
           PRINT("Turn Left");
@@ -322,33 +335,37 @@ void mav_exercise_periodic(void) {
       turn = 0;
       break;
     case TURN_LEFT:
-      increase_nav_heading(heading_increment);
+      PRINT("\n\n\nTurning Left\n\n\n");
+      increase_nav_heading(-1*heading_increment);
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 5){
+      if (counter >= 3){
       navigation_state = SAFE;
       }
       counter++;
       break;
     
     case TURN_RIGHT:
-      increase_nav_heading(-1*heading_increment);
+      PRINT("\n\n\nTurning Right\n\n\n");
+      increase_nav_heading(1*heading_increment);
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 5){
+      if (counter >= 3){
       navigation_state = SAFE;
       }
       counter++;
       break;
 
     case TURN_AROUND:
+      PRINT("\n\n\nRotate90\n\n\n");
       increase_nav_heading(turn_around_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 5){
+      if (counter >= 3){
         navigation_state = SAFE;
       }
       counter++;
       break;
     case SEARCH_FOR_SAFE_HEADING:
+      PRINT("\n\n\nSearch Safe Heading\n\n\n");
       increase_nav_heading(heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
@@ -358,6 +375,7 @@ void mav_exercise_periodic(void) {
       counter ++;
       break;
     case OUT_OF_BOUNDS:
+      PRINT("\n\n\nOUT Bounds\n\n\n");
       increase_nav_heading(heading_increment);
       moveWaypointForward(WP_TRAJECTORY, 1.5f);
 

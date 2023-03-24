@@ -323,7 +323,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   //     PRINT("Failed Calculation. Section: %d\n", NUM_HOR_SEC + index);
   //   }
   // }
-  PRINT("--------------------------------------------------------------------------------------\n\n");
+  //PRINT("--------------------------------------------------------------------------------------\n\n");
   
   // flow_y_test[0] = flow_y_test[0] + flow_y_test[0 + NUM_HOR_SEC] - flow_y_test[1];
   // flow_y_test[2] = flow_y_test[2] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[1];
@@ -350,24 +350,24 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 
 
   // leo's
-  // if ((fabs(flow_y_test[2]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[2]) < fabs(flow_y_test[0]))) {
-  //   turn = RIGHT;
-  //   PRINT("Decison: Turn Right");
-  // }
-  // else if ((fabs(flow_y_test[0]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[0]) < fabs(flow_y_test[2]))) {
-  //   turn = LEFT;
-  //   PRINT("Decison: Turn Left");
-  // }
-  // else {
-  //   if (fabs(flow_y_test[1]) > 80){
-  //     turn = 1.5;
-  //     PRINT("Decison: Rotate 90");
-  //   }
-  //   else {
-  //     turn = CENTER;
-  //     PRINT("Decison: Stay Center");
-  //   }
-  // }
+  if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
+    turn = RIGHT;
+    //PRINT("Decison: Turn Right");
+  }
+  else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
+    turn = LEFT;
+    //PRINT("Decison: Turn Left");
+  }
+  else {
+    if (abs(flow_y_test[1]) > 80){
+      turn = 1.5;
+      //PRINT("Decison: Rotate 90");
+    }
+    else {
+      turn = CENTER;
+      //PRINT("Decison: Stay Center");
+    }
+  }
 
   // if (turn = CENTER) {
   //   if (abs(flow_y_test[1]) > 100){
@@ -387,11 +387,14 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   // //   turn = CENTER;
   // //}
 
-  for (index=0;index<NUM_HOR_SEC;index++) {
+  for (int index=0;index<NUM_HOR_SEC;index++) {
     div_coloring(&sections_img_p[index], turn);
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   }
 
+  // PRINT("Section: %d, flow_y: %f\n", 0, flow_y_test[0]);
+  // PRINT("Section: %d, flow_y: %f\n", 1, flow_y_test[1]);
+  // PRINT("Section: %d, flow_y: %f\n", 2, flow_y_test[2]);
   //img = &cropped_img;
   img = &final_img;
   return img;

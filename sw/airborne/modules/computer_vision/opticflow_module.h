@@ -34,6 +34,7 @@
 
 // Needed for settings
 extern struct opticflow_t opticflow[];
+//static float flow_y_test[3]; 
 //extern struct opticflow_t opticflow_mav[][ACTIVE_CAMERAS];
 extern struct opticflow_t opticflow_l[];
 extern struct opticflow_t opticflow_c[];
