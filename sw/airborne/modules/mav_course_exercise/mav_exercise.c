@@ -262,18 +262,18 @@ void mav_exercise_periodic(void) {
         turn_left += 2;
         turn_right -=1;
         stay_center -=1;
-        rotate_90 -=2;
+        rotate_90 -=1;
         //PRINT("Decison: Turn Left");
         }
         else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
         turn_right += 2;
         turn_left -=1;
         stay_center -=1;
-        rotate_90 -=2;
+        rotate_90 -=1;
         //PRINT("Decison: Turn Right");
         }
         else if (fabs(flow_center_mav) > 200){
-          rotate_90 +=2;
+          rotate_90 +=4;
           turn_right -= 1;
           turn_left -=1;
           stay_center -=1;
@@ -360,8 +360,8 @@ void mav_exercise_periodic(void) {
       break;
 
     case TURN_AROUND:
-      PRINT("\n\n\nRotate90\n\n\n");
-      increase_nav_heading(turn_around_increment);
+      increase_nav_heading(120);
+      moveWaypointForward(WP_TRAJECTORY, 1.5f);
       counter_hold = 0;
 
       // make sure we have a couple of good readings before declaring the way safe
@@ -383,7 +383,7 @@ void mav_exercise_periodic(void) {
       //increase_nav_heading(40);
 
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 3){
+      if (counter >= 1){
         navigation_state = SAFE;
       }
       counter ++;
