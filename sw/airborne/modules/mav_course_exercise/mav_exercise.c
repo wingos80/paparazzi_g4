@@ -45,6 +45,7 @@ enum navigation_state_t {
   TURN_LEFT,
   TURN_RIGHT,
   TURN_AROUND,
+  HOLD,
   SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS
 };
@@ -59,11 +60,12 @@ float oob_haeding_increment = 5.f;      // heading angle increment if out of bou
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 float heading_increment = 10.f;
-float turn_around_increment = 40.f;
+float turn_around_increment = 20.f;
 uint32_t now_ts;
 float divergence_threshold = 0.3f;
 float size_div = 0;
 int counter = 0;
+int counter_hold;
 int counter_threshold = 4;
 float total_flow = 0;
 
@@ -252,8 +254,8 @@ void mav_exercise_periodic(void) {
   
   switch (navigation_state){
     case SAFE:
-      counter =0;
-      moveDistance = 1.0;
+      
+      moveDistance = 1/(turn+1)*(1.5) + 0.5;
       PRINT("\n\n\nSAFE\n\n\n");
       if (total_flow >= 100){
         if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
@@ -298,10 +300,10 @@ void mav_exercise_periodic(void) {
 
 
       // Move waypoint forward
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+      moveWaypointForward(WP_TRAJECTORY, 1.5f * 1);
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         navigation_state = OUT_OF_BOUNDS;
-      } else if (turn >= stay_center && turn >= 8){
+      } else if (turn >= stay_center && turn >= 10){
         navigation_state = OBSTACLE_FOUND;
       } else {
         moveWaypointForward(WP_GOAL, moveDistance);
@@ -314,6 +316,7 @@ void mav_exercise_periodic(void) {
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
       moveDistance = 0.0;
+      counter =0;
 
       if (turn == turn_left) {
           PRINT("Turn Left");
@@ -337,9 +340,10 @@ void mav_exercise_periodic(void) {
     case TURN_LEFT:
       PRINT("\n\n\nTurning Left\n\n\n");
       increase_nav_heading(-1*heading_increment);
+      counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
       if (counter >= 3){
-      navigation_state = SAFE;
+      navigation_state = HOLD;
       }
       counter++;
       break;
@@ -347,9 +351,10 @@ void mav_exercise_periodic(void) {
     case TURN_RIGHT:
       PRINT("\n\n\nTurning Right\n\n\n");
       increase_nav_heading(1*heading_increment);
+      counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
       if (counter >= 3){
-      navigation_state = SAFE;
+      navigation_state = HOLD;
       }
       counter++;
       break;
@@ -357,16 +362,25 @@ void mav_exercise_periodic(void) {
     case TURN_AROUND:
       PRINT("\n\n\nRotate90\n\n\n");
       increase_nav_heading(turn_around_increment);
+      counter_hold = 0;
 
       // make sure we have a couple of good readings before declaring the way safe
       if (counter >= 3){
-        navigation_state = SAFE;
+        navigation_state = HOLD;
       }
       counter++;
       break;
+    case HOLD:
+      PRINT("\n\n\nHOLD\n\n\n");
+      // make sure we have a couple of good readings before declaring the way safe
+      if (counter_hold >= 5){
+      navigation_state = SAFE;
+      }
+      counter_hold++;
+      break;
     case SEARCH_FOR_SAFE_HEADING:
       PRINT("\n\n\nSearch Safe Heading\n\n\n");
-      increase_nav_heading(heading_increment);
+      //increase_nav_heading(40);
 
       // make sure we have a couple of good readings before declaring the way safe
       if (counter >= 3){
@@ -376,18 +390,19 @@ void mav_exercise_periodic(void) {
       break;
     case OUT_OF_BOUNDS:
       PRINT("\n\n\nOUT Bounds\n\n\n");
-      increase_nav_heading(heading_increment);
+      increase_nav_heading(120);
       moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         // add offset to head back into arena
-        increase_nav_heading(heading_increment);
+        //increase_nav_heading(120);
         // reset safe counter
         turn_left = 0;
         turn_right =0;
         stay_center =0;
         rotate_90 = 0;
         turn = 0;
+        counter = 0;
         // ensure direction is safe before continuing
         navigation_state = SEARCH_FOR_SAFE_HEADING;
       }
