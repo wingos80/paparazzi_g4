@@ -350,24 +350,24 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 
 
   // leo's
-  if ((fabs(flow_y_test[2]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[2]) < fabs(flow_y_test[0]))) {
-    turn = RIGHT;
-    PRINT("Decison: Turn Right");
-  }
-  else if ((fabs(flow_y_test[0]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[0]) < fabs(flow_y_test[2]))) {
-    turn = LEFT;
-    PRINT("Decison: Turn Left");
-  }
-  else {
-    if (fabs(flow_y_test[1]) > 80){
-      turn = 1.5;
-      PRINT("Decison: Rotate 90");
-    }
-    else {
-      turn = CENTER;
-      PRINT("Decison: Stay Center");
-    }
-  }
+  // if ((fabs(flow_y_test[2]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[2]) < fabs(flow_y_test[0]))) {
+  //   turn = RIGHT;
+  //   PRINT("Decison: Turn Right");
+  // }
+  // else if ((fabs(flow_y_test[0]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[0]) < fabs(flow_y_test[2]))) {
+  //   turn = LEFT;
+  //   PRINT("Decison: Turn Left");
+  // }
+  // else {
+  //   if (fabs(flow_y_test[1]) > 80){
+  //     turn = 1.5;
+  //     PRINT("Decison: Rotate 90");
+  //   }
+  //   else {
+  //     turn = CENTER;
+  //     PRINT("Decison: Stay Center");
+  //   }
+  // }
 
   // if (turn = CENTER) {
   //   if (abs(flow_y_test[1]) > 100){
