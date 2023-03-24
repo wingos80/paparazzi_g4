@@ -63,8 +63,8 @@ int counter_threshold = 4;
   
 int test = 1;
 int rotate = 0;
-float vy = 0.0;
-float vx = 0.0;
+// float vy = 0.0;
+// float vx = 0.0;
 
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -80,8 +80,7 @@ static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
                                int16_t __attribute__((unused)) pixel_width,
                                int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality,
-                               int16_t __attribute__((unused)) extra) {
+                               int32_t quality, int16_t __attribute__((unused)) extra) {
   color_count = quality;
 }
 
@@ -97,8 +96,7 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             float size_divergence,
                             float __attribute__((unused)) flow_left,
                             float __attribute__((unused)) flow_center,
-                            float __attribute__((unused))flow_right) 
-                            {
+                            float __attribute__((unused)) flow_right) {
   size_div = size_divergence;
 }
 

@@ -350,16 +350,16 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 
 
   // leo's
-  if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
+  if ((fabs(flow_y_test[2]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[2]) < fabs(flow_y_test[0]))) {
     turn = RIGHT;
     PRINT("Decison: Turn Right");
   }
-  else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
+  else if ((fabs(flow_y_test[0]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[0]) < fabs(flow_y_test[2]))) {
     turn = LEFT;
     PRINT("Decison: Turn Left");
   }
   else {
-    if (abs(flow_y_test[1]) > 80){
+    if (fabs(flow_y_test[1]) > 80){
       turn = 1.5;
       PRINT("Decison: Rotate 90");
     }
@@ -387,7 +387,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   // //   turn = CENTER;
   // //}
 
-  for (int index=0;index<NUM_HOR_SEC;index++) {
+  for (index=0;index<NUM_HOR_SEC;index++) {
     div_coloring(&sections_img_p[index], turn);
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   }
