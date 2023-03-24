@@ -287,13 +287,13 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
         //dive_sizee = temp_result[camera_id].div_size;
         //ttc = 1.0/(gradi*abs(divergencee)+ constt);
       }
-      PRINT("Section: %d, flow_y: %f\n", index, flow_y_test[index]);
+      //PRINT("Section: %d, flow_y: %f\n", index, flow_y_test[index]);
 
       pthread_mutex_unlock(&opticflow_mutex);
     }
     else{
       flow_y_test[index] = 0;
-      PRINT("Failed Calculation/n/n/n Section: %d\n", index);
+      //PRINT("Failed Calculation/n/n/n Section: %d\n", index);
     }
   }
 
@@ -352,20 +352,20 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   // leo's
   if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
     turn = RIGHT;
-    PRINT("Decison: Turn Right");
+    //PRINT("Decison: Turn Right");
   }
   else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
     turn = LEFT;
-    PRINT("Decison: Turn Left");
+    //PRINT("Decison: Turn Left");
   }
   else {
     if (abs(flow_y_test[1]) > 80){
       turn = 1.5;
-      PRINT("Decison: Rotate 90");
+      //PRINT("Decison: Rotate 90");
     }
     else {
       turn = CENTER;
-      PRINT("Decison: Stay Center");
+      //PRINT("Decison: Stay Center");
     }
   }
 
