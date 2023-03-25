@@ -93,7 +93,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 #endif
 
 #ifndef CENTER_FACTOR
-#define CENTER_FACTOR 2
+#define CENTER_FACTOR 1
 #endif
 
 /* The main opticflow variables */
@@ -375,7 +375,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   }
   else
   {
-    if (fabs(flow_y_test[1]) > 80)
+    if (fabs(flow_y_test[1]) > 40*CENTER_FACTOR)
     {
       turn = 1.5;
       PRINT("Decision: Rotate 90\n");
