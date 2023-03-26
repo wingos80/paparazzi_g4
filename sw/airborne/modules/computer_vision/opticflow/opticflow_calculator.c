@@ -482,94 +482,53 @@ void opticflow_calc_init(struct opticflow_t opticflow[])
 #endif
 }
 
-void opticflow_calc_init_mav(struct opticflow_t opticflow[], int index)
+void opticflow_calc_init_mav(struct opticflow_t opticflow[], int num_sec)
 {
+  //printf("address opticflow_mav for index %d: %p/n/n", index, opticflow);
   /* Set the default values */
-  opticflow[0].method = OPTICFLOW_METHOD; //0 = LK_fast9, 1 = Edgeflow
-  opticflow[0].window_size = OPTICFLOW_WINDOW_SIZE;
-  opticflow[0].search_distance = OPTICFLOW_SEARCH_DISTANCE;
-  opticflow[0].derotation = OPTICFLOW_DEROTATION; //0 = OFF, 1 = ON
-  opticflow[0].derotation_correction_factor_x = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X;
-  opticflow[0].derotation_correction_factor_y = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y;
-  opticflow[0].track_back = OPTICFLOW_TRACK_BACK;
-  opticflow[0].show_flow = OPTICFLOW_SHOW_FLOW;
-  opticflow[0].max_track_corners = OPTICFLOW_MAX_TRACK_CORNERS;
-  opticflow[0].subpixel_factor = OPTICFLOW_SUBPIXEL_FACTOR;
-  if (opticflow[0].subpixel_factor == 0) {
-    opticflow[0].subpixel_factor = 10;
+  for (int idx = 0; idx < num_sec; idx++) {
+    opticflow[idx].method = OPTICFLOW_METHOD; //0 = LK_fast9, 1 = Edgeflow
+    opticflow[idx].window_size = OPTICFLOW_WINDOW_SIZE;
+    opticflow[idx].search_distance = OPTICFLOW_SEARCH_DISTANCE;
+    opticflow[idx].derotation = OPTICFLOW_DEROTATION; //0 = OFF, 1 = ON
+    opticflow[idx].derotation_correction_factor_x = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X;
+    opticflow[idx].derotation_correction_factor_y = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y;
+    opticflow[idx].track_back = OPTICFLOW_TRACK_BACK;
+    opticflow[idx].show_flow = OPTICFLOW_SHOW_FLOW;
+    opticflow[idx].max_track_corners = OPTICFLOW_MAX_TRACK_CORNERS;
+    opticflow[idx].subpixel_factor = OPTICFLOW_SUBPIXEL_FACTOR;
+    if (opticflow[idx].subpixel_factor == 0) {
+      opticflow[idx].subpixel_factor = 10;
+    }
+    opticflow[idx].resolution_factor = OPTICFLOW_RESOLUTION_FACTOR;
+    opticflow[idx].max_iterations = OPTICFLOW_MAX_ITERATIONS;
+    opticflow[idx].threshold_vec = OPTICFLOW_THRESHOLD_VEC;
+    opticflow[idx].pyramid_level = OPTICFLOW_PYRAMID_LEVEL;
+    opticflow[idx].median_filter = OPTICFLOW_MEDIAN_FILTER;
+    opticflow[idx].feature_management = OPTICFLOW_FEATURE_MANAGEMENT;
+    opticflow[idx].fast9_region_detect = OPTICFLOW_FAST9_REGION_DETECT;
+    opticflow[idx].fast9_num_regions = OPTICFLOW_FAST9_NUM_REGIONS;
+
+    opticflow[idx].fast9_adaptive = OPTICFLOW_FAST9_ADAPTIVE;
+    opticflow[idx].fast9_threshold = OPTICFLOW_FAST9_THRESHOLD;
+    opticflow[idx].fast9_min_distance = OPTICFLOW_FAST9_MIN_DISTANCE;
+    opticflow[idx].fast9_padding = OPTICFLOW_FAST9_PADDING;
+    opticflow[idx].fast9_rsize = FAST9_MAX_CORNERS;
+    opticflow[idx].fast9_ret_corners = calloc(opticflow[0].fast9_rsize, sizeof(struct point_t));
+
+    opticflow[idx].corner_method = OPTICFLOW_CORNER_METHOD;
+    opticflow[idx].actfast_long_step = OPTICFLOW_ACTFAST_LONG_STEP;
+    opticflow[idx].actfast_short_step = OPTICFLOW_ACTFAST_SHORT_STEP;
+    opticflow[idx].actfast_min_gradient = OPTICFLOW_ACTFAST_MIN_GRADIENT;
+    opticflow[idx].actfast_gradient_method = OPTICFLOW_ACTFAST_GRADIENT_METHOD;
+
+    opticflow[idx].camera = &OPTICFLOW_CAMERA;
+    opticflow[idx].id = idx;
   }
-  opticflow[0].resolution_factor = OPTICFLOW_RESOLUTION_FACTOR;
-  opticflow[0].max_iterations = OPTICFLOW_MAX_ITERATIONS;
-  opticflow[0].threshold_vec = OPTICFLOW_THRESHOLD_VEC;
-  opticflow[0].pyramid_level = OPTICFLOW_PYRAMID_LEVEL;
-  opticflow[0].median_filter = OPTICFLOW_MEDIAN_FILTER;
-  opticflow[0].feature_management = OPTICFLOW_FEATURE_MANAGEMENT;
-  opticflow[0].fast9_region_detect = OPTICFLOW_FAST9_REGION_DETECT;
-  opticflow[0].fast9_num_regions = OPTICFLOW_FAST9_NUM_REGIONS;
-
-  opticflow[0].fast9_adaptive = OPTICFLOW_FAST9_ADAPTIVE;
-  opticflow[0].fast9_threshold = OPTICFLOW_FAST9_THRESHOLD;
-  opticflow[0].fast9_min_distance = OPTICFLOW_FAST9_MIN_DISTANCE;
-  opticflow[0].fast9_padding = OPTICFLOW_FAST9_PADDING;
-  opticflow[0].fast9_rsize = FAST9_MAX_CORNERS;
-  opticflow[0].fast9_ret_corners = calloc(opticflow[0].fast9_rsize, sizeof(struct point_t));
-
-  opticflow[0].corner_method = OPTICFLOW_CORNER_METHOD;
-  opticflow[0].actfast_long_step = OPTICFLOW_ACTFAST_LONG_STEP;
-  opticflow[0].actfast_short_step = OPTICFLOW_ACTFAST_SHORT_STEP;
-  opticflow[0].actfast_min_gradient = OPTICFLOW_ACTFAST_MIN_GRADIENT;
-  opticflow[0].actfast_gradient_method = OPTICFLOW_ACTFAST_GRADIENT_METHOD;
-
-  opticflow[0].camera = &OPTICFLOW_CAMERA;
-  opticflow[0].id = index;
-
   struct FloatEulers euler_cam1 = {OPTICFLOW_BODY_TO_CAM_PHI, OPTICFLOW_BODY_TO_CAM_THETA, OPTICFLOW_BODY_TO_CAM_PSI};
   float_rmat_of_eulers(&body_to_cam[0], &euler_cam1);
-
-#ifdef OPTICFLOW_CAMERA2
-  opticflow[1].method = OPTICFLOW_METHOD_CAMERA2; //0 = LK_fast9, 1 = Edgeflow
-  opticflow[1].window_size = OPTICFLOW_WINDOW_SIZE_CAMERA2;
-  opticflow[1].search_distance = OPTICFLOW_SEARCH_DISTANCE_CAMERA2;
-  opticflow[1].derotation = OPTICFLOW_DEROTATION_CAMERA2; //0 = OFF, 1 = ON
-  opticflow[1].derotation_correction_factor_x = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X_CAMERA2;
-  opticflow[1].derotation_correction_factor_y = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y_CAMERA2;
-  opticflow[1].track_back = OPTICFLOW_TRACK_BACK_CAMERA2;
-  opticflow[1].show_flow = OPTICFLOW_SHOW_FLOW_CAMERA2;
-  opticflow[1].max_track_corners = OPTICFLOW_MAX_TRACK_CORNERS_CAMERA2;
-  opticflow[1].subpixel_factor = OPTICFLOW_SUBPIXEL_FACTOR_CAMERA2;
-  if (opticflow[1].subpixel_factor == 0) {
-    opticflow[1].subpixel_factor = 10;
-  }
-  opticflow[1].resolution_factor = OPTICFLOW_RESOLUTION_FACTOR_CAMERA2;
-  opticflow[1].max_iterations = OPTICFLOW_MAX_ITERATIONS_CAMERA2;
-  opticflow[1].threshold_vec = OPTICFLOW_THRESHOLD_VEC_CAMERA2;
-  opticflow[1].pyramid_level = OPTICFLOW_PYRAMID_LEVEL_CAMERA2;
-  opticflow[1].median_filter = OPTICFLOW_MEDIAN_FILTER_CAMERA2;
-  opticflow[1].feature_management = OPTICFLOW_FEATURE_MANAGEMENT_CAMERA2;
-  opticflow[1].fast9_region_detect = OPTICFLOW_FAST9_REGION_DETECT_CAMERA2;
-  opticflow[1].fast9_num_regions = OPTICFLOW_FAST9_NUM_REGIONS_CAMERA2;
-
-  opticflow[1].fast9_adaptive = OPTICFLOW_FAST9_ADAPTIVE_CAMERA2;
-  opticflow[1].fast9_threshold = OPTICFLOW_FAST9_THRESHOLD_CAMERA2;
-  opticflow[1].fast9_min_distance = OPTICFLOW_FAST9_MIN_DISTANCE_CAMERA2;
-  opticflow[1].fast9_padding = OPTICFLOW_FAST9_PADDING_CAMERA2;
-  opticflow[1].fast9_rsize = FAST9_MAX_CORNERS;
-  opticflow[1].fast9_ret_corners = calloc(opticflow[0].fast9_rsize, sizeof(struct point_t));
-
-  opticflow[1].corner_method = OPTICFLOW_CORNER_METHOD_CAMERA2;
-  opticflow[1].actfast_long_step = OPTICFLOW_ACTFAST_LONG_STEP_CAMERA2;
-  opticflow[1].actfast_short_step = OPTICFLOW_ACTFAST_SHORT_STEP_CAMERA2;
-  opticflow[1].actfast_min_gradient = OPTICFLOW_ACTFAST_MIN_GRADIENT_CAMERA2;
-  opticflow[1].actfast_gradient_method = OPTICFLOW_ACTFAST_GRADIENT_METHOD_CAMERA2;
-
-  opticflow[1].camera = &OPTICFLOW_CAMERA2;
-  opticflow[1].id = 1;
-
-  struct FloatEulers euler_cam2 = {OPTICFLOW_BODY_TO_CAM_PHI_CAMERA2, OPTICFLOW_BODY_TO_CAM_THETA_CAMERA2,
-      OPTICFLOW_BODY_TO_CAM_PSI_CAMERA2};
-  float_rmat_of_eulers(&body_to_cam[1], &euler_cam2);
-#endif
 }
+
 
 
 
@@ -583,7 +542,7 @@ void opticflow_calc_init_mav(struct opticflow_t opticflow[], int index)
  * @return Was optical flow successful
  */
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
-                             struct opticflow_result_t *result, int index)
+                             struct opticflow_result_t *result)
 {
   //opticflow->max_track_corners = 2;
   if (opticflow->just_switched_method) {
@@ -1269,12 +1228,17 @@ bool calc_edgeflow_tot(struct opticflow_t *opticflow, struct image_t *img,
  * @param[out] *result The optical flow result
  */
 bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
-                          struct opticflow_result_t *result, int index)
+                          struct opticflow_result_t *result, int num_sec)
 {
   bool flow_successful = false;
   // A switch counter that checks in the loop if the current method is similar,
   // to the previous (for reinitializing structs)
-  static int8_t switch_counter[2] = {-1, -1};
+  static int8_t switch_counter[3] = {-1,-1,-1};
+  // for (int j=0; j< num_sec; j++) {
+  //   switch_counter[j] = -1;
+  // }
+
+
   if (switch_counter[opticflow->id] != opticflow->method) {
     opticflow->just_switched_method = true;
     switch_counter[opticflow->id] = opticflow->method;
@@ -1286,7 +1250,7 @@ bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
 
   // Switch between methods (0 = fast9/lukas-kanade, 1 = EdgeFlow)
   if (opticflow->method == 0) {
-    flow_successful = calc_fast9_lukas_kanade(opticflow, img, result, index);
+    flow_successful = calc_fast9_lukas_kanade(opticflow, img, result);
   } else if (opticflow->method == 1) {
     flow_successful = calc_edgeflow_tot(opticflow, img, result);
   }

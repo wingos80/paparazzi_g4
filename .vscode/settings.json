@@ -19,7 +19,8 @@
         "cstdlib": "c",
         "opticflow_calculator.h": "c",
         "cmath": "c",
-        "complex": "c"
+        "complex": "c",
+        "type_traits": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "esbonio.sphinx.confDir": "",
