@@ -147,16 +147,6 @@ static void opticflow_telem_send(struct transport_tx *trans, struct link_device 
                                    &opticflow_result[idx_camera].surface_roughness,
                                    &opticflow_result[idx_camera].divergence,
                                    &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
-      // pprz_msg_send_OPTIC_FLOW_EST(trans, dev, AC_ID,
-      //                              &opticflow_result[idx_camera].fps, &opticflow_result[idx_camera].corner_cnt,
-      //                              &opticflow_result[idx_camera].tracked_cnt, &opticflow_result[idx_camera].flow_x,
-      //                              &opticflow_result[idx_camera].flow_y, &opticflow_result[idx_camera].flow_der_x,
-      //                              &opticflow_result[idx_camera].flow_der_y, &opticflow_result[idx_camera].vel_body.x,
-      //                              &opticflow_result[idx_camera].vel_body.y, &opticflow_result[idx_camera].vel_body.z,
-      //                              &flow_y_center,
-      //                              &flow_x_test,
-      //                              &divergencee,
-      //                              &opticflow_result[idx_camera].camera_id); // TODO: no noise measurement here...
     }
   }
   pthread_mutex_unlock(&opticflow_mutex);
@@ -282,10 +272,6 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
       flow_y_test[index] = opticflow_result[camera_id].flow_y;
       if (index == 1){
         flow_x_test = temp_result[camera_id].flow_x;
-        //flow_y_center = flow_y_test[index];
-        //divergencee = temp_result[camera_id].divergence;
-        //dive_sizee = temp_result[camera_id].div_size;
-        //ttc = 1.0/(gradi*abs(divergencee)+ constt);
       }
       //PRINT("Section: %d, flow_y: %f\n", index, flow_y_test[index]);
 
@@ -297,34 +283,6 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     }
   }
 
-  // optic flow calculations for second layer sections
-  // for (index=0;index<(NUM_HOR_SEC-1);index++){
-  //   image_create(&bigger_sections_img_p[index], 2*section_w, 2*section_h, IMAGE_YUV422);
-  //   glue_img(&sections_img_p[index], &bigger_sections_img_p[index], section_w, section_h, index);
-  //   glue_img(&sections_img_p[index+1], &bigger_sections_img_p[index], section_w, section_h, index);
-
-  //   struct opticflow_t *opticflow_pp = &opticflow_mav[index+NUM_HOR_SEC][camera_id];
-  //   bool ret_val = false;
-
-  //   ret_val = opticflow_calc_frame(opticflow_pp, &bigger_sections_img_p[index], &temp_result[camera_id], NUM_HOR_SEC + index);
-  //   if(ret_val){
-  //     // Copy the result if finished
-  //     pthread_mutex_lock(&opticflow_mutex);
-  //     opticflow_result[camera_id] = temp_result[camera_id];
-  //     opticflow_got_result[camera_id] = true;
-      
-  //     flow_y_test[NUM_HOR_SEC+index] = opticflow_result[camera_id].flow_y;
-  //     PRINT("Section: %d, flow_y: %f\n", NUM_HOR_SEC + index, flow_y_test[NUM_HOR_SEC+index]);
-
-  //     pthread_mutex_unlock(&opticflow_mutex);
-  //   }
-  //   else{
-  //     flow_y_test[index+NUM_HOR_SEC] = 0;
-  //     PRINT("Failed Calculation. Section: %d\n", NUM_HOR_SEC + index);
-  //   }
-  // }
-  //PRINT("--------------------------------------------------------------------------------------\n\n");
-  
   // flow_y_test[0] = flow_y_test[0] + flow_y_test[0 + NUM_HOR_SEC] - flow_y_test[1];
   // flow_y_test[2] = flow_y_test[2] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[1];
   //flow_y_test[1] = flow_y_test[1] + flow_y_test[0 + NUM_HOR_SEC] + flow_y_test[1 + NUM_HOR_SEC] - flow_y_test[0] - flow_y_test[2];
@@ -333,33 +291,19 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 
   float turn;
   
-  // // compute time to contact
-  // PRINT("time to contact: %f\n", ttc);
-  // // time to contact colouring
-  // if (0.0 < ttc < time_threshold){
-  //   if ((abs(flow_y_test[2]) < abs(flow_y_test[0]))){
-  //   turn = RIGHT;
-  // }
-  //   else {
-  //     turn = LEFT;
-  //   }
-  // } else{
-  //   turn = CENTER;
-  // }
-
 
 
   // leo's
-  if ((abs(flow_y_test[2]) < abs(flow_y_test[1])) && (abs(flow_y_test[2]) < abs(flow_y_test[0]))) {
+  if ((fabs(flow_y_test[2]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[2]) < fabs(flow_y_test[0]))) {
     turn = RIGHT;
     //PRINT("Decison: Turn Right");
   }
-  else if ((abs(flow_y_test[0]) < abs(flow_y_test[1])) && (abs(flow_y_test[0]) < abs(flow_y_test[2]))) {
+  else if ((fabs(flow_y_test[0]) < fabs(flow_y_test[1])) && (fabs(flow_y_test[0]) < fabs(flow_y_test[2]))) {
     turn = LEFT;
     //PRINT("Decison: Turn Left");
   }
   else {
-    if (abs(flow_y_test[1]) > 80){
+    if (fabs(flow_y_test[1]) > 80){
       turn = 1.5;
       //PRINT("Decison: Rotate 90");
     }
@@ -391,22 +335,6 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
     div_coloring(&sections_img_p[index], turn);
     glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   }
-
-  // PRINT("Section: %d, flow_y: %f\n", 0, flow_y_test[0]);
-  // PRINT("Section: %d, flow_y: %f\n", 1, flow_y_test[1]);
-  // PRINT("Section: %d, flow_y: %f\n", 2, flow_y_test[2]);
-  //img = &cropped_img;
   img = &final_img;
   return img;
   }
-
-//  * @param img height = 520, width = 240 (front cam normally)
-//  * @return struct image_t* 
-//  */
-// struct image_t *crop_img(struct image_t *img)
-// {
-//   // take away 120 pixels from the width and 170 pixels from the heigh
-//   int w_change = 120;
-//   int h_change = 170;
-//   uint16_t new_w = img->w - 120;
-//   uint16_t new_h = img->h - 170;

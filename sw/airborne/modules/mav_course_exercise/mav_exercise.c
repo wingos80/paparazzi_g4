@@ -55,25 +55,22 @@ float oa_color_count_frac = 0.18f;
 enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float moveDistance = 2;                 // waypoint displacement [m]
+float moveDistance = 2.0;                 // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 float heading_increment = 10.f;
 float turn_around_increment = 20.f;
-uint32_t now_ts;
-float divergence_threshold = 0.3f;
+// float divergence_threshold = 0.3f;
 float size_div = 0;
 int counter = 0;
 int counter_hold;
-int counter_threshold = 4;
+int counter_threshold = 15;
 float total_flow = 0;
 
   
-int test = 1;
+int test = 0;
 int rotate = 0;
-//float vy = 0.0;
-//float vx = 0.0;
 
 float turn_left = 0;
 float turn_right = 0;
@@ -81,6 +78,13 @@ float stay_center = 0;
 float flow_left_mav;
 float flow_center_mav;
 float flow_right_mav;
+float flow_noise_threshold = 300;
+float min_move_dist = 0.5;
+int min_momentum = 0;
+int turn_momentum=6;
+int turn_cap = 10;
+float out_of_bounds_dheading = 120.0;
+
 float rotate_90 = 0;
 float turn = 0;
 float x_init = 0;
@@ -143,19 +147,10 @@ void mav_exercise_periodic(void) {
   }
   // compute current color thresholds
   // front_camera defined in airframe xml, with the video_capture module
-  //int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+  // int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
   // PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
-  //PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
-
-
-  
-  // update our safe confidence using color threshold
-  // if (size_div < divergence_threshold ) {
-  //   obstacle_free_confidence++;
-  // } else {
-  //   obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
-  // }
+  // PRINT("Divergence_count: %f  Divergence_threshold: %f \n", size_div, divergence_threshold);
 
   // bound obstacle_free_confidence
   
@@ -168,42 +163,42 @@ void mav_exercise_periodic(void) {
   
 
   // switch (navigation_state) {
-  //   case SAFE:
-  //     // guidance_h_set_body_vel(0.0, 2.0);
-  //     if (test){        
-  //       counter++;
-  //       if (counter>counter_threshold){
-  //         moveDistance = -moveDistance;
-  //         heading_increment = -heading_increment;
-  //         counter = 0;
-  //       }
-
-  //       // moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
-  //       if (rotate){
-  //         increase_nav_heading(heading_increment);
-  //         waypoint_move_here_2d(WP_GOAL);
-  //         waypoint_move_here_2d(WP_TRAJECTORY);
-  //       }else {
-  //         moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
-  //       }
-  //       break;
-  //     }
-  //     else{
-  //     if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
-  //       navigation_state = OUT_OF_BOUNDS;
-  //     } else if (obstacle_free_confidence == 0) {
-  //       navigation_state = OBSTACLE_FOUND;
-  //     } else {
-  //       moveWaypointForward(WP_GOAL, moveDistance);
-  //     }
-  //     }
-  //     break;
+    // case SAFE.:
+      // guidance_h_set_body_vel(0.0, 2.0);
+      // if (test){        
+      //   counter++;
+      //   if (counter>counter_threshold){
+      //     moveDistance = -moveDistance;
+      //     heading_increment = -heading_increment;
+      //     counter = 0;
+      //   }
+  
+      //   // moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+      //   if (rotate){
+      //     increase_nav_heading(heading_increment);
+      //     waypoint_move_here_2d(WP_GOAL);
+      //     waypoint_move_here_2d(WP_TRAJECTORY);
+      //   }else {
+      //     moveWaypointForward(WP_GOAL, 1.5f * moveDistance);
+      //   }
+      //   break;
+      // }
+      // else{
+      // if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY))) {
+      //   navigation_state = OUT_OF_BOUNDS;
+      // } else if (obstacle_free_confidence == 0) {
+      //   navigation_state = OBSTACLE_FOUND;
+      // } else {
+      //   moveWaypointForward(WP_GOAL, moveDistance);
+      // }
+      // }
+      // break;
   //   case OBSTACLE_FOUND:
   //     // TODO Change behavior
   //     // stop as soon as obstacle is found
   //     waypoint_move_here_2d(WP_GOAL);
   //     waypoint_move_here_2d(WP_TRAJECTORY);
-
+  //
   //     choose20degreesIncrementAvoidance();
   //     increase_nav_heading(heading_increment);
   //     navigation_state = SAFE;
@@ -246,69 +241,137 @@ void mav_exercise_periodic(void) {
   PRINT("Flow right: %f\n\n", flow_right_mav);
   PRINT("Flow center: %f\n\n", flow_center_mav);
 
-
-
   //moveDistance = fminf(1.0, 1.0);
 
   total_flow = fabs(flow_left_mav) + fabs(flow_right_mav) + fabs(flow_center_mav);
   
   switch (navigation_state){
     case SAFE:
-      
-      moveDistance = 1/(turn+1)*(1.5) + 0.5;
-      PRINT("\n\n\nSAFE\n\n\n");
-      if (total_flow >= 100){
-        if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
-        turn_left += 2;
-        turn_right -=1;
-        stay_center -=1;
-        rotate_90 -=1;
-        //PRINT("Decison: Turn Left");
-        }
-        else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
-        turn_right += 2;
-        turn_left -=1;
-        stay_center -=1;
-        rotate_90 -=1;
-        //PRINT("Decison: Turn Right");
-        }
-        else if (fabs(flow_center_mav) > 200){
-          rotate_90 +=4;
-          turn_right -= 1;
+            // guidance_h_set_body_vel(0.0, 2.0);
+      if (test){        
+        counter++;
+          if (counter>counter_threshold){
+            moveDistance = -moveDistance;
+            counter = 0;
+            turn_left = 0; turn_right =0; stay_center =0; rotate_90 = 0;            
+          }
+        moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
+        PRINT("total flow:%f\n", total_flow);
+
+        // moveDistance = 1/(turn+1)*(1.5) + min_move_dist;
+        if (total_flow >= flow_noise_threshold){
+          if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
+          turn_left += 2;
+          turn_right -=1;
+          stay_center -=1;
+          rotate_90 -=1;
+          //PRINT("Decison: Turn Left");
+          }
+          else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
+          turn_right += 2;
           turn_left -=1;
           stay_center -=1;
-          //PRINT("Decison: Rotate 90");
+          rotate_90 -=1;
+          //PRINT("Decison: Turn Right");
+          }
+          else if (fabs(flow_center_mav) > 200){
+            rotate_90 +=4;
+            turn_right -= 1;
+            turn_left -=1;
+            stay_center -=1;
+            //PRINT("Decison: Rotate 90");
+          }
+        }
+        else {
+          stay_center +=2;
+          rotate_90 -=1;
+          turn_right -= 1;
+          turn_left -=1;
+          //PRINT("Decison: Stay Center");
+          }
+        
+
+        Bound(turn_left, 0, turn_cap);
+        Bound(turn_right, 0, turn_cap);
+        Bound(stay_center, 0, turn_cap);
+        Bound(rotate_90, 0, turn_cap);
+
+        turn = fmaxf(turn_left, turn_right);
+        turn = fmaxf(turn, rotate_90);
+
+        if (turn_left > turn_right){
+          PRINT("turning left\n");
+        } else if (turn_left < turn_right){
+          PRINT("turning right\n");
+        } else if (rotate_90 > turn){
+          PRINT("rotating 90\n");
+        } else {
+          PRINT("staying center\n");
+        }
+
+        if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+          PRINT("\n\n\nOut of Bounds\n\n\n");
+        } else if (turn >= stay_center && turn >= turn_momentum){
+          PRINT("\n\n\nObstacle Found\n\n\n");
+        } else {
+          PRINT("\n\n\nSAFE\n\n\n");
+        }
+        PRINT("---------------------------------------------------\n");
+        break;
+      }
+      else{
+        moveDistance = 1/(turn+1)*(1.5) + min_move_dist;
+        PRINT("\n\n\nSAFE\n\n\n");
+        if (total_flow >= flow_noise_threshold){
+          if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
+          turn_left += 2;
+          turn_right -=1;
+          stay_center -=1;
+          rotate_90 -=1;
+          //PRINT("Decison: Turn Left");
+          }
+          else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
+          turn_right += 2;
+          turn_left -=1;
+          stay_center -=1;
+          rotate_90 -=1;
+          //PRINT("Decison: Turn Right");
+          }
+          else if (fabs(flow_center_mav) > 200){
+            rotate_90 +=4;
+            turn_right -= 1;
+            turn_left -=1;
+            stay_center -=1;
+            //PRINT("Decison: Rotate 90");
+          }
+        }
+        else {
+          stay_center +=2;
+          rotate_90 -=1;
+          turn_right -= 1;
+          turn_left -=1;
+          //PRINT("Decison: Stay Center");
+          }
+        
+
+        Bound(turn_left, 0, turn_cap);
+        Bound(turn_right, 0, turn_cap);
+        Bound(stay_center, 0, turn_cap);
+        Bound(rotate_90, 0, turn_cap);
+
+        turn = fmaxf(turn_left, turn_right);
+        turn = fmaxf(turn, rotate_90);
+
+        // Move waypoint forward
+        moveWaypointForward(WP_TRAJECTORY, 1.5f * 1);
+        if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+          navigation_state = OUT_OF_BOUNDS;
+        } else if (turn >= stay_center && turn >= turn_momentum){
+          navigation_state = OBSTACLE_FOUND;
+        } else {
+          moveWaypointForward(WP_GOAL, moveDistance);
         }
       }
-      else {
-        stay_center +=2;
-        rotate_90 -=1;
-        turn_right -= 1;
-        turn_left -=1;
-        //PRINT("Decison: Stay Center");
-        }
-      
-
-      Bound(turn_left, 0, 14);
-      Bound(turn_right, 0, 14);
-      Bound(stay_center, 0, 14);
-      Bound(rotate_90, 0, 14);
-
-      turn = fmaxf(turn_left, turn_right);
-      turn = fmaxf(turn, rotate_90);
-
-
-
-      // Move waypoint forward
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * 1);
-      if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (turn >= stay_center && turn >= 10){
-        navigation_state = OBSTACLE_FOUND;
-      } else {
-        moveWaypointForward(WP_GOAL, moveDistance);
-      }
-
       break;
     case OBSTACLE_FOUND:
       // stop
@@ -390,17 +453,17 @@ void mav_exercise_periodic(void) {
       break;
     case OUT_OF_BOUNDS:
       PRINT("\n\n\nOUT Bounds\n\n\n");
-      increase_nav_heading(120);
+      increase_nav_heading(out_of_bounds_dheading);
       moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         // add offset to head back into arena
         //increase_nav_heading(120);
         // reset safe counter
-        turn_left = 0;
-        turn_right =0;
-        stay_center =0;
-        rotate_90 = 0;
+        turn_left = min_momentum;
+        turn_right = min_momentum;
+        stay_center = 0;
+        rotate_90 = min_momentum;
         turn = 0;
         counter = 0;
         // ensure direction is safe before continuing
