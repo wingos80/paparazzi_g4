@@ -34,8 +34,8 @@ extern float out_of_bounds_dheading;
 extern int counter_threshold;
 extern int test;
 extern int rotate;
-extern float thresh_1;
-extern float thresh_2;
-extern float thresh_3;
+
+extern float total_thresh;
+extern float diff_thresh;
 
 #endif //PAPARAZZI_MAV_EXERCISE_H

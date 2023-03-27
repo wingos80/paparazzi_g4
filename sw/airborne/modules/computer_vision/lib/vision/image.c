@@ -336,10 +336,10 @@ void div_coloring(struct image_t *input, float val)
   float delta_w2r[3] = {0.0, 0.0, 0.0};  
 
   // val = (val+1500.0)/3000.0;
-  for(int i=0; i<3; i++) {
-      delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
-      delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
-  }
+  // for(int i=0; i<3; i++) {
+  //     delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
+  //     delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
+  // }
 
 
   // if (val == 0.0){
@@ -359,6 +359,12 @@ void div_coloring(struct image_t *input, float val)
   //     YUV_out[i] = YUV_green[i];
   //   }
   // }
+
+  //val = (val+1500.0)/3000.0;
+  for(int i=0; i<3; i++) {    
+      delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
+      delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
+  }
 
   if (val == 1.5) {
     for(int i=0; i<3; i++) {  

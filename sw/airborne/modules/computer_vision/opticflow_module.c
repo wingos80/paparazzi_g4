@@ -90,8 +90,8 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS_CAMERA2)
 #define RIGHT 1.0     ///< Number of horizontal sections on image to calculate optical flow
 #endif 
 
-#ifndef ROTATE90
-#define ROTATE90 0.75     ///< Number of horizontal sections on image to calculate optical flow
+#ifndef TURNAROUND
+#define TURNAROUND 1.5     ///< Number of horizontal sections on image to calculate optical flow
 #endif
 
 /* The main opticflow variables */
@@ -127,12 +127,9 @@ float flow_x_test;
 float flow_y_center;
 float flow[3];
 
-// expoenentially weighted moving average params
-float rho = 0.95; // Rho value for smoothing
-float s_prev[3] = {0.0, 0.0, 0.0}; // Initial value ewma value
-float s_cur[3];
-float s_cur_bc[3];
-int i = 0;
+// // expoenentially weighted moving average params
+// float total_thresh = 1100;
+// float diff_thresh = 380;
 
 #if PERIODIC_TELEMETRY
 #include "modules/datalink/telemetry.h"
@@ -263,7 +260,9 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
 {
   // crop the image first - take away 120 pixels from the width and 170 pixels from the heigh
   int w_change = 120;
-  int h_change = 170;
+  int h_change = 140;
+  // int w_change = 120;
+  // int h_change = 170;
   uint16_t new_w = img->w - w_change;
   uint16_t new_h = img->h - h_change;
   int section_h = new_h/NUM_HOR_SEC;  
@@ -350,45 +349,36 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   flow[1] = 0.5*abs(flow_y_test[1])+0.5*abs(flow_y_test[2]);
   flow[2] = 0.3*flow_y_test[2]+0.7*flow_y_test[3];
 
-  float total_flow = fabs(flow[0]) + fabs(flow[1]) + fabs(flow[2]);
-  float flow_difference = fabs(fabs(flow[0]) - fabs(flow[2]));
-  // // leo's
-  
-  if (total_flow>1000){
-    turn =1.5;
-  }
-  else if ((fabs(flow[2]) < fabs(flow[1])) && (fabs(flow[2]) < fabs(flow[0]))) {
-    turn = RIGHT;
-    //PRINT("Decison: Turn Right");
-  }
-  else if ((fabs(flow[0]) < fabs(flow[1])) && (fabs(flow[0]) < fabs(flow[2]))) {
-    turn = LEFT;
-    //PRINT("Decison: Turn Left");
-  }
-    else {
-      turn = CENTER;
-      //PRINT("Decison: Stay Center");
-    }
+  // float total_flow = fabs(flow[0]) + fabs(flow[1]) + fabs(flow[2]);
+  // float flow_difference = fabs(fabs(flow[0]) - fabs(flow[2]));
+  // bool right_is_smallest = (fabs(flow[2]) < fabs(flow[1])) && (fabs(flow[2]) < fabs(flow[0]));
+  // bool left_is_smallest = (fabs(flow[0]) < fabs(flow[1])) && (fabs(flow[0]) < fabs(flow[2]));
+  // PRINT("Flow left, center, right: %f, %f, %f \n", flow[0], flow[1], flow[2]);
+  // PRINT("Total Flow, Flow diff: %f, %f \n", total_flow, flow_difference);
+  // PRINT("\n------------------------------------------------\n\n\n");
+  // if (total_flow>total_thresh){
+  //   turn = TURNAROUND;
+  //   PRINT("Turn around\n\n");
+  // }
+  // // check if drone should turn right
+  // else if (right_is_smallest && (flow_difference>diff_thresh)) {
+  //   turn = RIGHT;
+  //   PRINT("Right\n\n");
+  // }
+  // // check if drone should turn left
+  // else if (left_is_smallest && (flow_difference>diff_thresh)) {
+  //   turn = LEFT;
+  //   PRINT("Left\n\n");
+  // }
+  // // if all fails, drone should stay center
+  //   else {
+  //     turn = CENTER;
+  //     PRINT("Center\n\n");
+  //   }
   turn = CENTER;
 
-  // if (turn = CENTER) {
-  //   if (abs(flow_y_test[1]) > 100){
-  //     turn = 1.5;
-  //   }
-  // }
-  // // if ((abs(flow_y_test[2]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[1]))) {
-  // //   turn = CENTER;
-  // // }
-  // // else if ((abs(flow_y_test[2]) > abs(flow_y_test[0])) && (abs(flow_y_test[2]) > abs(flow_y_test[1]))) {
-  // //   turn = LEFT;
-  // // }
-  // // else if ((abs(flow_y_test[0]) > abs(flow_y_test[1])) && (abs(flow_y_test[0]) > abs(flow_y_test[2]))) {
-  // //   turn = RIGHT;
-  // // }
-  // // else {
-  // //   turn = CENTER;
-  // //}
 
+    
   // for (int index=0;index<NUM_HOR_SEC;index++) {
   //   div_coloring(&cropped_img, turn);
   //   glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   

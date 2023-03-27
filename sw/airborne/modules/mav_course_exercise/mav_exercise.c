@@ -20,6 +20,7 @@
 
 #include "mav_exercise.h"
 #include "modules/core/abi.h"
+#include "modules/orange_avoider/orange_avoider_guided.h"
 #include "firmwares/rotorcraft/navigation.h"
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "state.h"
@@ -66,7 +67,7 @@ float turn_around_increment = 20.f;
 float size_div = 0;
 int counter = 0;
 int counter_hold;
-int counter_threshold = 15;
+int counter_threshold = 20;
 float total_flow = 0;
 float flow_diff;
   
@@ -85,8 +86,8 @@ float flow_right_mav;
 float flow_noise_threshold = 300;
 float min_move_dist = 0.5;
 int min_momentum = 0;
-int turn_decision = 6;
-int turn_cap = 10;
+int turn_decision = 8;
+int turn_cap = 12;
 float out_of_bounds_dheading = 120.0;
 
 float rotate_90 = 0;
@@ -96,11 +97,10 @@ float y_init = 0;
 int nav_heading_int;
 
 // // expoenentially weighted moving average params
-// float rho = 0.95; // Rho value for smoothing
-// float s_prev[3] = {0.0, 0.0, 0.0}; // Initial value ewma value
-// float s_cur[3];
-// float s_cur_bc[3];
-// int i = 0;
+float total_thresh = 1150;
+float diff_thresh = 100;
+
+
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
@@ -175,113 +175,96 @@ void mav_exercise_periodic(void) {
 
   // s_prev[0] = s_cur[0];
 
+  float total_flow = fabs(flow_left_mav) + fabs(flow_center_mav) + fabs(flow_right_mav);
+  float flow_difference = fabs(fabs(flow_left_mav) - fabs(flow_right_mav));
+
+
+  bool right_is_smallest = (fabs(flow_right_mav) < fabs(flow_center_mav)) && (fabs(flow_right_mav) < fabs(flow_left_mav));
+  bool left_is_smallest = (fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav));
+
   PRINT("Flow left, center, right: %f, %f, %f \n", flow_left_mav, flow_center_mav, flow_right_mav);
+  PRINT("Total Flow, Flow diff: %f, %f \n", total_flow, flow_difference);
 
-  //moveDistance = fminf(1.0, 1.0);
 
-  total_flow = fabs(flow_left_mav) + fabs(flow_center_mav);
-  flow_diff = fabs(flow_left_mav)-fabs(flow_right_mav);
   switch (navigation_state){
     case SAFE:
-            // guidance_h_set_body_vel(0.0, 2.0);
-      if (test){        
+      if (test){
         counter++;
         if (counter>counter_threshold){
           moveDistance = -moveDistance;
           counter = 0;
-          turn_left = 0; turn_right =0; stay_center =0; rotate_90 = 0;            
+          turn_left = 0; turn_right = 0; stay_center = 0; rotate_90 = 0;            
         }
         moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
-        // PRINT("total flow:%f\n", total_flow);
-        // if ((fabs(flow_left_mav)+fabs(flow_right_mav)) > thresh_1){
-        //   rotate_90 += 2;
-        //   turn_right -= 1;
-        //   turn_left -=1;
-        //   stay_center -=1;
-        //   // PRINT("Flow detected\n");
-        // } 
-        // else if ((fabs(flow_left_mav) < fabs(flow_right_mav)) && (flow_diff < thresh_2)){
-        //   turn_left +=2;
-        //   turn_right -=1;
-        //   stay_center -=1;
-        //   rotate_90 -=1;
-        // }
-        // else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (flow_diff < thresh_2)){
-        //   turn_right +=2;
-        //   turn_left -=1;
-        //   stay_center -=1;
-        //   rotate_90 -=1;
-        // }
-        // else {
-        //   stay_center +=2;
-        //   turn_right -=1;
-        //   turn_left -=1;
-        //   rotate_90 -=1;
-        // }
 
-        PRINT("Total flow: %f. ", total_flow);
-        // moveDistance = 1/(turn+1)*(1.5) + min_move_dist;
-        if (total_flow >= flow_noise_threshold){
-          PRINT("  Flow detected\n\n");
-          if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
+        if (total_flow>total_thresh){
+          rotate_90 +=2;
+          turn_right -= 1;
+          turn_left -=1;
+          stay_center -=1;
+          // PRINT("Turn around\n\n");
+        }
+        else if (left_is_smallest && (flow_difference>diff_thresh)) {
           turn_left += 2;
           turn_right -=1;
           stay_center -=1;
           rotate_90 -=1;
-          //PRINT("Decison: Turn Left");
-          }
-          else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
+          // PRINT("Left\n\n");
+        }
+        else if (right_is_smallest && (flow_difference>diff_thresh)) {
           turn_right += 2;
           turn_left -=1;
           stay_center -=1;
           rotate_90 -=1;
-          //PRINT("Decison: Turn Right");
-          }
-          else if (fabs(flow_center_mav) > 200){
-            rotate_90 +=4;
-            turn_right -= 1;
-            turn_left -=1;
-            stay_center -=1;
-            //PRINT("Decison: Rotate 90");
-          }
+          // PRINT("Right\n\n");
         }
         else {
           stay_center +=2;
           rotate_90 -=1;
           turn_right -= 1;
           turn_left -=1;
-          //PRINT("Decison: Stay Center");
-          }
-        
+          // PRINT("Center\n\n");
+        }    
 
         Bound(turn_left, 0, turn_cap);
         Bound(turn_right, 0, turn_cap);
         Bound(stay_center, 0, turn_cap);
         Bound(rotate_90, 0, turn_cap);
 
+        // choose the maximum between the turns
+
         turn = fmaxf(turn_left, turn_right);
         turn = fmaxf(turn, rotate_90);
 
+        PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
         if (turn_left > turn_right){
           PRINT("turning left\n");
-        } else if (turn_left < turn_right){
+        } else if (turn_right > turn_left){
           PRINT("turning right\n");
-        } else if (rotate_90 > turn){
+        } else if (rotate_90 >= turn){
           PRINT("rotating 90\n");
         } else {
           PRINT("staying center\n");
         }
 
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-          PRINT("\n\n\nOut of Bounds\n\n\n");
+          PRINT("Out of Bounds\n\n");
         } else if (turn >= stay_center && turn >= turn_decision){
-          PRINT("\n\n\nObstacle Found\n\n\n");
+          PRINT("Obstacle Found\n\n");
         } else {
-          PRINT("\n\n\nSAFE\n\n\n");
+          PRINT("SAFE\n\n");
         }
-        PRINT("---------------------------------------------------\n");
+
+
+        PRINT("\n------------------------------------------------\n\n\n");
         break;
       }
+      // ------------------------------------------------------
+      // ------------------------------------------------------
+      // TEST ENDS HERE
+      // ------------------------------------------------------
+      // ------------------------------------------------------
+
       else{
         moveDistance = 1/(turn+1)*(1.5) + min_move_dist;
         PRINT("\n\n\nSAFE\n\n\n");
@@ -339,8 +322,11 @@ void mav_exercise_periodic(void) {
     case OBSTACLE_FOUND:
       // stop
       PRINT("\n\n\nObstacle Found\n\n\n");
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+      // waypoint_move_here_2d(WP_GOAL);
+      // waypoint_move_here_2d(WP_TRAJECTORY);
+
+      moveWaypointForward(WP_GOAL, 0.0f);
+      moveWaypointForward(WP_TRAJECTORY, 0.0f);
       moveDistance = 0.0;
       counter =0;
 
