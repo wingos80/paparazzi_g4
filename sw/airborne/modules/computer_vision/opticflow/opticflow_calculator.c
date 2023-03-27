@@ -1233,7 +1233,7 @@ bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
   bool flow_successful = false;
   // A switch counter that checks in the loop if the current method is similar,
   // to the previous (for reinitializing structs)
-  static int8_t switch_counter[3] = {-1,-1,-1};
+  static int8_t switch_counter[5] = {-1,-1,-1,-1,-1};
   // for (int j=0; j< num_sec; j++) {
   //   switch_counter[j] = -1;
   // }

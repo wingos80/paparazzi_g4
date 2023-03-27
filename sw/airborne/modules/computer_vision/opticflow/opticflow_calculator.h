@@ -100,4 +100,3 @@ extern void kalman_filter_opticflow_velocity(float *velocity_x, float *velocity_
 extern void opticflow_calc_init_mav(struct opticflow_t opticflow[], int num_sec);
 #endif /* OPTICFLOW_CALCULATOR_H */
 
-

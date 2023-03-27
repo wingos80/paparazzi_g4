@@ -28,11 +28,14 @@ extern void mav_exercise_periodic(void);
 extern float flow_noise_threshold;
 extern float min_move_dist;
 extern int min_momentum;
-extern int turn_momentum;
+extern int turn_decision;
 extern int turn_cap;
 extern float out_of_bounds_dheading;
 extern int counter_threshold;
 extern int test;
 extern int rotate;
+extern float thresh_1;
+extern float thresh_2;
+extern float thresh_3;
 
 #endif //PAPARAZZI_MAV_EXERCISE_H

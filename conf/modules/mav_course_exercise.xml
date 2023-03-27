@@ -14,9 +14,12 @@
          <dl_setting var="rotate" min="0" step="1" max="1" shortname="rotate"/>
          <dl_setting var="flow_noise_threshold" min="0.0" step="0.2" max="1000.0" shortname="flow noise threshold"/>
          <dl_setting var="min_move_dist" min="-10.0" step="0.2" max="10.0" shortname="min waypoint move dist"/>
-         <dl_setting var="turn_momentum" min="0" step="1" max="39" shortname="turn decision momentum"/>
+         <dl_setting var="turn_decision" min="0" step="1" max="39" shortname="turn decision momentum"/>
          <dl_setting var="turn_cap" min="0" step="1" max="40" shortname="turn decision cap"/>
          <dl_setting var="out_of_bounds_dheading" min="0.0" step="0.2" max="360.0" shortname="out_of_bounds_dheading"/>
+         <dl_setting var="thresh_1" min="0.0" step="0.5" max="1000.0" shortname="thresh 1"/>
+         <dl_setting var="thresh_2" min="0.0" step="0.5" max="1000.0" shortname="thresh 2"/>
+         <dl_setting var="thresh_3" min="0.0" step="0.5" max="1000.0" shortname="thresh 3"/>
       </dl_settings>
     </dl_settings>
   </settings>
