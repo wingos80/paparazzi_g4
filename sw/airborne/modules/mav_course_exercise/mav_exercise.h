@@ -26,7 +26,7 @@ extern void mav_exercise_periodic(void);
 
 // settings
 extern float flow_noise_threshold;
-extern float min_move_dist;
+extern float moveDistance;
 extern int min_momentum;
 extern int turn_decision;
 extern int turn_cap;
