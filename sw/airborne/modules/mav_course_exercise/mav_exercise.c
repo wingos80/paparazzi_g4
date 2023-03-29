@@ -55,7 +55,7 @@ enum navigation_state_t {
 };
 
 // define and initialise global variables
-float oa_color_count_frac = 0.18f;
+float oa_color_count_frac = 0.16f;
 enum navigation_state_t navigation_state = SAFE;
 int32_t color_count = 0;               // orange color count from color filter for obstacle detection
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
@@ -74,7 +74,7 @@ int counter_threshold = 20;
 float total_flow = 0;
 float flow_diff;
   
-int test = 0;
+int test = 1;
 int rotate = 0;
 float thresh_1 = 50.0;
 float thresh_2 = 50.0;
@@ -101,7 +101,7 @@ int nav_heading_int;
 
 // // expoenentially weighted moving average params
 float total_thresh = 100;
-float diff_thresh = 80;
+float diff_thresh = 116;
 
 
 // needed to receive output from a separate module running on a parallel process
@@ -161,7 +161,7 @@ void mav_exercise_periodic(void) {
   // front_camera defined in airframe xml, with the video_capture module
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
-  PRINT("Color_count: %d  threshold: %d state: %d \n\n", color_count, color_count_threshold, navigation_state);
+  //PRINT("Color_count: %d  threshold: %d state: %d \n\n", color_count, color_count_threshold, navigation_state);
 
 // update our safe confidence using color threshold
   if(color_count < color_count_threshold){
@@ -214,6 +214,8 @@ void mav_exercise_periodic(void) {
           counter = 0;
           turn_left -= 100; turn_right -= 100; stay_center -= 100; rotate_90 -= 100;            
         }
+        if (counter < 4)
+        {turn_left -= 100; turn_right -= 100; stay_center -= 100; rotate_90 -= 100;}
         moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
 
         if ((total_flow>total_thresh) && (flow_difference<diff_thresh)){
@@ -462,6 +464,7 @@ void mav_exercise_periodic(void) {
       counter ++;
       break;
     case ORANGE_SEARCH_FOR_SAFE_HEADING:
+      moveWaypointForward(WP_GOAL, 0.0f);
       increase_nav_heading(orange_heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
