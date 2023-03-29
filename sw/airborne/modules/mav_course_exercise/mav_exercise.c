@@ -38,17 +38,19 @@
 uint8_t increase_nav_heading(float incrementDegrees);
 uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
-uint8_t choose20degreesIncrementAvoidance(void);
+uint8_t chooseRandomIncrementAvoidance(void);
 float RotateCenterArena(void);
 
 enum navigation_state_t {
   SAFE,
+  ORANGE_FOUND,
   OBSTACLE_FOUND,
   TURN_LEFT,
   TURN_RIGHT,
   TURN_AROUND,
   HOLD,
   SEARCH_FOR_SAFE_HEADING,
+  ORANGE_SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS
 };
 
@@ -62,6 +64,7 @@ float oob_haeding_increment = 5.f;      // heading angle increment if out of bou
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 float heading_increment = 10.f;
+float orange_heading_increment = 5.f;
 float turn_around_increment = 20.f;
 // float divergence_threshold = 0.3f;
 float size_div = 0;
@@ -146,7 +149,7 @@ void mav_exercise_init(void) {
 
   x_init = stateGetPositionEnu_i()->x;
   y_init = stateGetPositionEnu_i()->y;
-  PRINT("out_of_bounds_dheading: %f turn_cap: %d turn_decision: %d flow_noise_threshold: %f \n", out_of_bounds_dheading, turn_cap, turn_decision, flow_noise_threshold);
+  //PRINT("out_of_bounds_dheading: %f turn_cap: %d turn_decision: %d flow_noise_threshold: %f \n", out_of_bounds_dheading, turn_cap, turn_decision, flow_noise_threshold);
 }
 
 void mav_exercise_periodic(void) {
@@ -156,7 +159,21 @@ void mav_exercise_periodic(void) {
   }
   // compute current color thresholds
   // front_camera defined in airframe xml, with the video_capture module
-  // int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+  int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+
+  PRINT("Color_count: %d  threshold: %d state: %d \n\n", color_count, color_count_threshold, navigation_state);
+
+// update our safe confidence using color threshold
+  if(color_count < color_count_threshold){
+    obstacle_free_confidence++;
+  } else {
+    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+  }
+
+  // bound obstacle_free_confidence
+  Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
+
+
 
   // float flow;
   // // exponentially weighted moving average to smooth flow values
@@ -182,8 +199,8 @@ void mav_exercise_periodic(void) {
   bool right_is_smallest = (fabs(flow_right_mav) < fabs(flow_center_mav)) && (fabs(flow_right_mav) < fabs(flow_left_mav));
   bool left_is_smallest = (fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav));
 
-  PRINT("Flow left, center, right: %f, %f, %f \n", flow_left_mav, flow_center_mav, flow_right_mav);
-  PRINT("Total Flow, Flow diff: %f, %f \n", total_flow, flow_difference);
+  //PRINT("Flow left, center, right: %f, %f, %f \n", flow_left_mav, flow_center_mav, flow_right_mav);
+  //PRINT("Total Flow, Flow diff: %f, %f \n", total_flow, flow_difference);
 
 
   switch (navigation_state){
@@ -268,7 +285,17 @@ void mav_exercise_periodic(void) {
       // ------------------------------------------------------
 
       else{
-        PRINT("SAFE\n\n\n");
+        //PRINT("SAFE\n\n\n");
+        
+        // update our safe confidence using color threshold
+        if(color_count < color_count_threshold){
+          obstacle_free_confidence++;
+        } else {
+          obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+        }
+
+        // bound obstacle_free_confidence
+        Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
         if ((total_flow>total_thresh) && (flow_difference<diff_thresh)){
           rotate_90 +=2;
@@ -310,35 +337,49 @@ void mav_exercise_periodic(void) {
 
         PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
         if (turn_left > turn_right){
-          PRINT("turning left\n");
+          //PRINT("turning left\n");
         } else if (turn_right > turn_left){
-          PRINT("turning right\n");
+          //PRINT("turning right\n");
         } else if (rotate_90 >= turn){
-          PRINT("rotating 90\n");
+          //PRINT("rotating 90\n");
         } else {
-          PRINT("staying center\n");
+          //PRINT("staying center\n");
         }
         // Move waypoint forward
         moveWaypointForward(WP_TRAJECTORY, 1.2f * moveDistance);
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
           navigation_state = OUT_OF_BOUNDS;
-          PRINT("Out of Bounds\n\n");
+          //PRINT("Out of Bounds\n\n");
+        } else if (obstacle_free_confidence == 0){
+        navigation_state = ORANGE_FOUND;
         } else if (turn >= stay_center && turn >= turn_decision){
           navigation_state = OBSTACLE_FOUND;
-          PRINT("Obstacle Found\n\n");
+          //PRINT("Obstacle Found\n\n");
         } else {
           moveWaypointForward(WP_GOAL, moveDistance);
           navigation_state = SAFE;
-          PRINT("staying center\n");
+          //PRINT("staying center\n");
         }
 
 
         PRINT("       ------------------------------------------------\n\n\n");
       }
       break;
+    case ORANGE_FOUND:
+      PRINT("STATE: Orange Found\n\n");
+      // stop
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
+
+      // randomly select new search direction
+      chooseRandomIncrementAvoidance();
+
+      navigation_state = ORANGE_SEARCH_FOR_SAFE_HEADING;
+
+      break;
     case OBSTACLE_FOUND:
       // stop
-      PRINT("STATE: Obstacle Found\n\n");
+      //PRINT("STATE: Obstacle Found\n\n");
       // waypoint_move_here_2d(WP_GOAL);
       // waypoint_move_here_2d(WP_TRAJECTORY);
 
@@ -346,15 +387,15 @@ void mav_exercise_periodic(void) {
       moveWaypointForward(WP_TRAJECTORY, 0.0f);
 
       if (turn == turn_left) {
-          PRINT("Turn Left");
+          //PRINT("Turn Left");
           navigation_state = TURN_LEFT;
         }
         else if (turn == turn_right){
-          PRINT("Turn Right");
+          //PRINT("Turn Right");
           navigation_state = TURN_RIGHT;
         }
         else {
-          PRINT("Rotate 90 degrees");
+          //PRINT("Rotate 90 degrees");
           navigation_state = TURN_AROUND;
         }
       
@@ -365,7 +406,7 @@ void mav_exercise_periodic(void) {
       turn = 0;
       break;
     case TURN_LEFT:
-      PRINT("STATE: Turning Left\n\n");
+      //PRINT("STATE: Turning Left\n\n");
       increase_nav_heading(-1*heading_increment);
       counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
@@ -376,7 +417,7 @@ void mav_exercise_periodic(void) {
       break;
     
     case TURN_RIGHT:
-      PRINT("STATE: Turning Right\n\n");
+      //PRINT("STATE: Turning Right\n\n");
       increase_nav_heading(1*heading_increment);
       counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
@@ -387,7 +428,7 @@ void mav_exercise_periodic(void) {
       break;
 
     case TURN_AROUND:
-      PRINT("STATE: Turning Around\n\n");
+      //PRINT("STATE: Turning Around\n\n");
       increase_nav_heading(120);
       moveWaypointForward(WP_TRAJECTORY, 0.8f);
       counter_hold = 0;
@@ -400,16 +441,16 @@ void mav_exercise_periodic(void) {
       break;
 
     case HOLD:
-      PRINT("STATE: HOLD\n\n\n");
+      //PRINT("STATE: HOLD\n\n\n");
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter_hold >= 2){
+      if (counter_hold >= 1){
       navigation_state = SAFE;
       }
       counter_hold++;
       break;
 
     case SEARCH_FOR_SAFE_HEADING:
-      PRINT("STATE: Search Safe Heading\n\n");
+      //PRINT("STATE: Search Safe Heading\n\n");
       //increase_nav_heading(40);
 
       // make sure we have a couple of good readings before declaring the way safe
@@ -418,8 +459,16 @@ void mav_exercise_periodic(void) {
       }
       counter ++;
       break;
+    case ORANGE_SEARCH_FOR_SAFE_HEADING:
+      increase_nav_heading(orange_heading_increment);
+
+      // make sure we have a couple of good readings before declaring the way safe
+      if (obstacle_free_confidence >= 2){
+        navigation_state = HOLD;
+      }
+      break;
     case OUT_OF_BOUNDS:
-      PRINT("STATE: OUT Bounds\n\n");
+      //PRINT("STATE: OUT Bounds\n\n");
       increase_nav_heading(out_of_bounds_dheading);
       moveWaypointForward(WP_GOAL, 0.0f);
       moveWaypointForward(WP_TRAJECTORY, 0.8f);
@@ -441,169 +490,6 @@ void mav_exercise_periodic(void) {
     default:
       break;
   }
-
-  // switch (navigation_state){
-  //   case SAFE:
-  //       PRINT("\n\n\nSAFE\n\n\n");
-  //       if ((fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav))) {
-  //         turn_left += 2;
-  //         turn_right -=1;
-  //         stay_center -=1;
-  //         rotate_90 -=1;
-  //         //PRINT("Decison: Turn Left");
-  //       }
-  //       else if ((fabs(flow_right_mav) < fabs(flow_left_mav)) && (fabs(flow_right_mav) < fabs(flow_center_mav))) {
-  //         turn_right += 2;
-  //         turn_left -=1;
-  //         stay_center -=1;
-  //         rotate_90 -=1;
-  //         //PRINT("Decison: Turn Right");
-  //       }
-  //       else {
-  //         if (fabs(flow_center_mav) > 80){
-  //           rotate_90 +=3;
-  //           turn_right -= 1;
-  //           turn_left -=1;
-  //           stay_center -=1;
-  //           //PRINT("Decison: Rotate 90");
-  //         }
-  //         else {
-  //           stay_center +=2;
-  //           rotate_90 -=1;
-  //           turn_right -= 1;
-  //           turn_left -=1;
-  //           //PRINT("Decison: Stay Center");
-  //         }
-  //       }
-
-  //       Bound(turn_left, 0, 14);
-  //       Bound(turn_right, 0, 14);
-  //       Bound(stay_center, 0, 14);
-  //       Bound(rotate_90, 0, 14);
-
-  //       turn = fmaxf(turn_left, turn_right);
-  //       turn = fmaxf(turn, rotate_90);
-
-  //       // if (turn >= stay_center){
-  //       //   if (turn == turn_left) {
-  //       //     PRINT("Turn Left");
-  //       //   }
-  //       //   else if (turn == turn_right){
-  //       //     PRINT("Turn Right");
-  //       //   }
-  //       //   else {
-  //       //     PRINT("Rotate 90 degrees");
-  //       //   }
-  //       // }
-  //       // else{
-  //       //   PRINT("Stay Center");
-  //       // }
-
-  //       moveWaypointForward(WP_TRAJECTORY, 1.5f * 0.5);
-  //       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-  //         navigation_state = OUT_OF_BOUNDS;
-  //       }
-  //       else {
-  //         if (turn >= stay_center && turn >= 7){
-  //           navigation_state = WAIT1;
-  //       }
-  //         else {
-  //           guidance_h_set_vel(speed_sp, 0); 
-            
-  //           moveWaypointForward(WP_GOAL, moveDistance);
-  //       }  
-  //     }
-  //     break;
-  //   case WAIT1:
-  //     moveDistance = 0;
-  //     moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-  //     waypoint_move_here_2d(WP_GOAL);
-  //     waypoint_move_here_2d(WP_TRAJECTORY);
-  //     PRINT("\n\n\nWAIT1\n\n\n");
-  //     counter ++;
-  //       if (counter >= 20) {
-  //         navigation_state = OBSTACLE_FOUND;
-  //         counter = 0;
-  //       }
-  //       else {
-  //         navigation_state = WAIT1;
-  //       }
-  //     break; 
-
-  //   case OBSTACLE_FOUND:
-  //     // stop
-  //     PRINT("\n\n\nOBSTACLE FOUND\n\n\n");
-  //     waypoint_move_here_2d(WP_GOAL);
-  //     waypoint_move_here_2d(WP_TRAJECTORY);
-
-
-  //     guidance_h_set_vel(0, 0);
-  //     if (turn == turn_left) {
-  //       increase_nav_heading(-1*obstacle_heading_increment);
-  //       counter ++;
-  //     }
-  //     else if (turn == turn_right){
-  //       //nav_heading_int = ANGLE_BFP_OF_REAL(0.35);
-  //       increase_nav_heading(obstacle_heading_increment);
-  //       counter ++;
-  //     }
-  //     else {
-  //       increase_nav_heading(90);
-  //       counter ++;
-  //     }
-  //     turn_left =0;
-  //     turn_right = 0;
-  //     stay_center = 0;
-  //     rotate_90 = 0;
-  //     // select new search direction based on optic flow divergence - to be implemented
-  //     //chooseAvoidanceDirection();
-  //     if (counter >= 2) {
-  //       counter = 0;
-  //       navigation_state = WAIT2;
-  //     }else{
-  //       navigation_state = OBSTACLE_FOUND;
-  //     }
-  //     break;
-  //   case WAIT2:
-  //   guidance_h_set_vel(0, 0);
-  //   PRINT("\n\n\nWAIT2\n\n\n");
-  //   counter ++;
-  //     if (counter >= 30) {
-  //       navigation_state = SAFE;
-  //       counter = 0;
-  //     }
-  //     else {
-  //       navigation_state = WAIT2;
-  //     }
-  //    break;
-  //   case OUT_OF_BOUNDS:
-  //     // stop
-  //     //guidance_h_set_body_vel(0.05, 0.1*RotateCenterArena());
-
-  //     // start turn back into arena
-  //     //guidance_h_set_heading_rate(RotateCenterArena() * RadOfDeg(incrementDegreesRate));
-  //     //PRINT("!!!!!!!!!!!!!!OUT OF BOUNDS!!!!!!!!!!!!!!!!!!!!!! \n");
-
-  //     navigation_state = SAFE;
-
-  //     break;
-    // case REENTER_ARENA:
-    //   // force floor center to opposite side of turn to head back into arena
-    //   if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
-    //     // return to heading mode
-    //     float test_heading = stateGetNedToBodyEulers_f()->psi + RotateCenterArena()*(3.14/4);
-    //     guidance_h_set_heading(test_heading);
-    //     // reset safe counter
-    //     obstacle_free_confidence = 0;
-
-    //     // ensure direction is safe before continuing
-    //     navigation_state = SAFE;
-    //   }
-      //break;
-  //   default:
-  //     break;
-  // }
-  
   return;
 }
 
@@ -656,62 +542,15 @@ uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters) {
 /*
  * Sets the variable 'heading_increment' randomly positive/negative
  */
-
-
-uint8_t choose20degreesIncrementAvoidance(void)
+uint8_t chooseRandomIncrementAvoidance(void)
 {
   // Randomly choose CW or CCW avoiding direction
   if (rand() % 2 == 0) {
-    heading_increment = obstacle_heading_increment;
+    heading_increment = 5.f;
+
   } else {
-    heading_increment = obstacle_heading_increment;
+    heading_increment = -5.f;
+
   }
   return false;
 }
-
-
-// float RotateCenterArena(void){
-
-//   // alpha - angle between reference heading and current position regarding starting point
-  
-
-//   float delta_x = (stateGetPositionEnu_i()->x - x_init);
-//   float delta_y = (stateGetPositionEnu_i()->y - y_init);
-//   float avoidance_heading_direction;
-
-//   float alpha = atan(delta_x/delta_y);
-
-//   if (delta_y > 0){
-//     if (delta_x >0){
-//       if (stateGetNedToBodyEulers_f()->psi > alpha){
-//         avoidance_heading_direction = 1.f;
-//       } else{
-//         avoidance_heading_direction = -1.f;
-//       }
-//     } else{
-//         if (stateGetNedToBodyEulers_f()->psi < alpha){
-//           avoidance_heading_direction = -1.f;
-//         }
-//         else {
-//           avoidance_heading_direction = 1.f;
-//         }
-//     }
-//   } else {
-//     if (delta_x < 0){
-//       if ((3.14159 + stateGetNedToBodyEulers_f()->psi) > alpha){
-//         avoidance_heading_direction = 1.f;
-//       } else{
-//         avoidance_heading_direction = -1.f;
-//       }
-//     } else{
-//       if ((3.14159 + stateGetNedToBodyEulers_f()->psi) > -alpha){
-//         avoidance_heading_direction = -1.f;
-//       }
-//       else{
-//         avoidance_heading_direction = 1.f;
-//       }
-//     }
-//   }
-
-// return avoidance_heading_direction;
-// }
