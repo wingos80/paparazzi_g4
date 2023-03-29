@@ -152,6 +152,50 @@ void mav_exercise_init(void) {
   //PRINT("out_of_bounds_dheading: %f turn_cap: %d turn_decision: %d flow_noise_threshold: %f \n", out_of_bounds_dheading, turn_cap, turn_decision, flow_noise_threshold);
 }
 
+void momentum_calc(float total_flow, float flow_difference, float full_flow, bool left_is_smallest, bool right_is_smallest) {
+
+  float full_flow_factor = full_flow / total_flow;
+
+  if (((total_flow>total_thresh) && (flow_difference<diff_thresh)) || (full_flow_factor <= 2) || (full_flow < 50) || (total_flow < 5))
+  {
+    rotate_90 +=2;
+    turn_right -= 1;
+    turn_left -=1;
+    stay_center -=1;
+    //PRINT("DETECTED Turn around\n\n");
+  }
+  else if (left_is_smallest && (flow_difference>diff_thresh) && fabs(flow_left_mav) > 10)
+  {
+    turn_left += 2;
+    turn_right -=1;
+    stay_center -=1;
+    rotate_90 -=1;
+    //PRINT("DETECTED Left\n\n");
+  }
+  else if (right_is_smallest && (flow_difference>diff_thresh) && fabs(flow_right_mav) > 10)
+  {
+    turn_right += 2;
+    turn_left -=1;
+    stay_center -=1;
+    rotate_90 -=1;
+    //PRINT("DETECTED Right\n\n");
+  }
+  else {
+    stay_center +=2;
+    rotate_90 -=1;
+    turn_right -= 1;
+    turn_left -=1;
+    ///PRINT("DETECTED Center\n\n");
+  } 
+  
+
+  Bound(turn_left, 0, turn_cap);
+  Bound(turn_right, 0, turn_cap);
+  Bound(stay_center, 0, turn_cap);
+  Bound(rotate_90, 0, turn_cap);   
+  
+}
+
 void mav_exercise_periodic(void) {
   // only evaluate our state machine if we are flying
   if (!autopilot_in_flight()) {
@@ -194,17 +238,19 @@ void mav_exercise_periodic(void) {
 
   float total_flow = fabs(flow_center_mav);
   float flow_difference = fabs(fabs(flow_left_mav) - fabs(flow_right_mav));
-
-
+  float full_flow = (fabs(flow_center_mav) + fabs(flow_left_mav) + fabs(flow_right_mav));
+  
   bool right_is_smallest = (fabs(flow_right_mav) < fabs(flow_center_mav)) && (fabs(flow_right_mav) < fabs(flow_left_mav));
   bool left_is_smallest = (fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav));
 
-  //PRINT("Flow left, center, right: %f, %f, %f \n", flow_left_mav, flow_center_mav, flow_right_mav);
-  //PRINT("Total Flow, Flow diff: %f, %f \n", total_flow, flow_difference);
+
+  // PRINT("Flow left =  %f, center =  %f, right =  %f\n", flow_left_mav, flow_center_mav, flow_right_mav);
+  // PRINT("Total Flow =  %f, Flow diff =  %f, low_total =  %f, factor = %f\n", total_flow, flow_difference,full_flow, full_flow_factor);
 
 
   switch (navigation_state){
     case SAFE:
+      #if 0
       if (test){
         counter++;
         if (counter>counter_threshold){
@@ -285,9 +331,10 @@ void mav_exercise_periodic(void) {
       // TEST ENDS HERE
       // ------------------------------------------------------
       // ------------------------------------------------------
-
-      else{
-        //PRINT("SAFE\n\n\n");
+      else
+      #endif
+      {
+        PRINT("STATE: SAFE\n\n\n");
         
         // update our safe confidence using color threshold
         if(color_count < color_count_threshold){
@@ -295,80 +342,43 @@ void mav_exercise_periodic(void) {
         } else {
           obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
         }
-
+         
         // bound obstacle_free_confidence
         Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
-
-        if ((total_flow>total_thresh) && (flow_difference<diff_thresh)){
-          rotate_90 +=2;
-          turn_right -= 1;
-          turn_left -=1;
-          stay_center -=1;
-          // PRINT("Turn around\n\n");
-        }
-        else if (left_is_smallest && (flow_difference>diff_thresh)) {
-          turn_left += 2;
-          turn_right -=1;
-          stay_center -=1;
-          rotate_90 -=1;
-          // PRINT("Left\n\n");
-        }
-        else if (right_is_smallest && (flow_difference>diff_thresh)) {
-          turn_right += 2;
-          turn_left -=1;
-          stay_center -=1;
-          rotate_90 -=1;
-          // PRINT("Right\n\n");
-        }
-        else {
-          stay_center +=2;
-          rotate_90 -=1;
-          turn_right -= 1;
-          turn_left -=1;
-          // PRINT("Center\n\n");
-        }    
         
-
-        Bound(turn_left, 0, turn_cap);
-        Bound(turn_right, 0, turn_cap);
-        Bound(stay_center, 0, turn_cap);
-        Bound(rotate_90, 0, turn_cap);
+        momentum_calc(total_flow, flow_difference, full_flow, left_is_smallest, right_is_smallest);
 
         turn = fmaxf(turn_left, turn_right);
         turn = fmaxf(turn, rotate_90);
-
-        PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
-        if (turn_left > turn_right){
-          PRINT("turning left\n");
-        } else if (turn_right > turn_left){
-          PRINT("turning right\n");
-        } else if (rotate_90 >= turn){
-          PRINT("rotating 90\n");
-        } else {
-          PRINT("staying center\n");
-        }
+        // PRINT("rotate90 =  %f, turn_right =  %f, stay_center =  %f, turn_left =  %f\n", rotate_90, turn_right, stay_center, turn_left);
+        // if (turn_left > turn_right){
+        //   PRINT("SELECTED left\n");
+        // } else if (turn_right > turn_left){
+        //   PRINT("SELECTED right\n");
+        // } else if (rotate_90 >= turn){
+        //   PRINT("SELECTED rotating\n");
+        // } else {
+        //   PRINT("SELECTED staying center\n");
+        // }
         // Move waypoint forward
         moveWaypointForward(WP_TRAJECTORY, 1.2f * moveDistance);
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
           navigation_state = OUT_OF_BOUNDS;
-          PRINT("Out of Bounds\n\n");
+          //PRINT("Out of Bounds\n\n");
         } else if (obstacle_free_confidence == 0){
         navigation_state = ORANGE_FOUND;
         } else if (turn >= stay_center && turn >= turn_decision){
           navigation_state = OBSTACLE_FOUND;
-          PRINT("Obstacle Found\n\n");
+          //PRINT("Obstacle Found\n\n");
         } else {
           moveWaypointForward(WP_GOAL, moveDistance);
           navigation_state = SAFE;
-          PRINT("staying center\n");
+          //PRINT("staying center\n");
         }
-
-
-        PRINT("       ------------------------------------------------\n\n\n");
       }
       break;
     case ORANGE_FOUND:
-      PRINT("STATE: Orange Found\n\n");
+      PRINT("STATE: ORANGE_FOUND\n\n");
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -381,7 +391,7 @@ void mav_exercise_periodic(void) {
       break;
     case OBSTACLE_FOUND:
       // stop
-      //PRINT("STATE: Obstacle Found\n\n");
+      PRINT("STATE: OBSTACLE_FOUND\n\n");
       // waypoint_move_here_2d(WP_GOAL);
       // waypoint_move_here_2d(WP_TRAJECTORY);
 
@@ -389,15 +399,15 @@ void mav_exercise_periodic(void) {
       moveWaypointForward(WP_TRAJECTORY, 0.0f);
 
       if (turn == turn_left) {
-          //PRINT("Turn Left");
+          //PRINT("SELECTED Turn Left\n\n");
           navigation_state = TURN_LEFT;
         }
         else if (turn == turn_right){
-          //PRINT("Turn Right");
+          //PRINT("SELECTED Turn Right\n\n");
           navigation_state = TURN_RIGHT;
         }
         else {
-          //PRINT("Rotate 90 degrees");
+          //PRINT("SELECTED Rotate 90 degrees\n\n");
           navigation_state = TURN_AROUND;
         }
       
@@ -406,9 +416,10 @@ void mav_exercise_periodic(void) {
       stay_center =0;
       rotate_90 = 0;
       turn = 0;
+      counter = 0;
       break;
     case TURN_LEFT:
-      //PRINT("STATE: Turning Left\n\n");
+      PRINT("STATE: TURN_LEFT\n\n");
       increase_nav_heading(-1*heading_increment);
       counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
@@ -419,7 +430,7 @@ void mav_exercise_periodic(void) {
       break;
     
     case TURN_RIGHT:
-      //PRINT("STATE: Turning Right\n\n");
+      PRINT("STATE: TURN_RIGHT\n\n");
       increase_nav_heading(1*heading_increment);
       counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
@@ -430,31 +441,41 @@ void mav_exercise_periodic(void) {
       break;
 
     case TURN_AROUND:
-      //PRINT("STATE: Turning Around\n\n");
-      if (left_is_smallest){increase_nav_heading(-90);}
-      else if (right_is_smallest){increase_nav_heading(90);}
-      
-      moveWaypointForward(WP_TRAJECTORY, 0.8f);
-      counter_hold = 0;
-
+      PRINT("STATE: TURN_AROUND\n\n");
+      if(counter<2){
+        // move back
+        moveWaypointForward(WP_GOAL, -1.0f);
+        PRINT("GOAL MOVED BACK\n\n");
+      } 
+      else if(counter == 2) {
+        moveWaypointForward(WP_GOAL, 0.0f);
+        if (left_is_smallest){increase_nav_heading(-90);}
+        else if (right_is_smallest){increase_nav_heading(90);}
+        PRINT("GOAL STILL+TURN\n\n");
+      }
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 1){
+      else {
+        //moveWaypointForward(WP_TRAJECTORY, 0.8f);
+        counter_hold = 0;
         navigation_state = HOLD;
       }
       counter++;
       break;
 
     case HOLD:
-      //PRINT("STATE: HOLD\n\n\n");
+      PRINT("STATE: HOLD\n\n\n");
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter_hold >= 1){
+      // update our safe confidence using color threshold
+      momentum_calc(total_flow, flow_difference, full_flow, left_is_smallest, right_is_smallest);
+
+      if (counter_hold >= 2){
       navigation_state = SAFE;
       }
       counter_hold++;
       break;
 
     case SEARCH_FOR_SAFE_HEADING:
-      //PRINT("STATE: Search Safe Heading\n\n");
+      PRINT("STATE: SEARCH_FOR_SAFE_HEADING\n\n");
       //increase_nav_heading(40);
 
       // make sure we have a couple of good readings before declaring the way safe
@@ -464,6 +485,7 @@ void mav_exercise_periodic(void) {
       counter ++;
       break;
     case ORANGE_SEARCH_FOR_SAFE_HEADING:
+       PRINT("STATE: ORANGE_SEARCH_FOR_SAFE_HEADING\n\n");
       moveWaypointForward(WP_GOAL, 0.0f);
       increase_nav_heading(orange_heading_increment);
 
@@ -473,7 +495,7 @@ void mav_exercise_periodic(void) {
       }
       break;
     case OUT_OF_BOUNDS:
-      //PRINT("STATE: OUT Bounds\n\n");
+      PRINT("STATE: OUT_OF_BOUNDS\n\n");
       increase_nav_heading(out_of_bounds_dheading);
       moveWaypointForward(WP_GOAL, 0.0f);
       moveWaypointForward(WP_TRAJECTORY, 0.8f);
@@ -495,6 +517,8 @@ void mav_exercise_periodic(void) {
     default:
       break;
   }
+  
+  PRINT("       ------------------------------------------------\n\n\n");
   return;
 }
 
