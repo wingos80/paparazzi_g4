@@ -63,7 +63,7 @@ float moveDistance = 1.0;               // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
-float heading_increment = 10.f;
+float heading_increment = 20.f;
 float orange_heading_increment = 5.f;
 float turn_around_increment = 20.f;
 // float divergence_threshold = 0.3f;
@@ -89,8 +89,8 @@ float flow_right_mav;
 float flow_noise_threshold = 300;
 float min_move_dist = 0.5;
 int min_momentum = 0;
-int turn_decision = 4;
-int turn_cap = 7;
+int turn_decision = 7;
+int turn_cap = 10;
 float out_of_bounds_dheading = 40.0;
 
 float rotate_90 = 0;
@@ -100,8 +100,8 @@ float y_init = 0;
 int nav_heading_int;
 
 // // expoenentially weighted moving average params
-float total_thresh = 94;
-float diff_thresh = 35.3;
+float total_thresh = 100;
+float diff_thresh = 80;
 
 
 // needed to receive output from a separate module running on a parallel process
@@ -337,28 +337,28 @@ void mav_exercise_periodic(void) {
 
         PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
         if (turn_left > turn_right){
-          //PRINT("turning left\n");
+          PRINT("turning left\n");
         } else if (turn_right > turn_left){
-          //PRINT("turning right\n");
+          PRINT("turning right\n");
         } else if (rotate_90 >= turn){
-          //PRINT("rotating 90\n");
+          PRINT("rotating 90\n");
         } else {
-          //PRINT("staying center\n");
+          PRINT("staying center\n");
         }
         // Move waypoint forward
         moveWaypointForward(WP_TRAJECTORY, 1.2f * moveDistance);
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
           navigation_state = OUT_OF_BOUNDS;
-          //PRINT("Out of Bounds\n\n");
+          PRINT("Out of Bounds\n\n");
         } else if (obstacle_free_confidence == 0){
         navigation_state = ORANGE_FOUND;
         } else if (turn >= stay_center && turn >= turn_decision){
           navigation_state = OBSTACLE_FOUND;
-          //PRINT("Obstacle Found\n\n");
+          PRINT("Obstacle Found\n\n");
         } else {
           moveWaypointForward(WP_GOAL, moveDistance);
           navigation_state = SAFE;
-          //PRINT("staying center\n");
+          PRINT("staying center\n");
         }
 
 
@@ -410,7 +410,7 @@ void mav_exercise_periodic(void) {
       increase_nav_heading(-1*heading_increment);
       counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 3){
+      if (counter >= 1){
       navigation_state = HOLD;
       }
       counter++;
@@ -421,7 +421,7 @@ void mav_exercise_periodic(void) {
       increase_nav_heading(1*heading_increment);
       counter_hold = 0;
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 3){
+      if (counter >= 1){
       navigation_state = HOLD;
       }
       counter++;
@@ -429,12 +429,14 @@ void mav_exercise_periodic(void) {
 
     case TURN_AROUND:
       //PRINT("STATE: Turning Around\n\n");
-      increase_nav_heading(120);
+      if (left_is_smallest){increase_nav_heading(-90);}
+      else if (right_is_smallest){increase_nav_heading(90);}
+      
       moveWaypointForward(WP_TRAJECTORY, 0.8f);
       counter_hold = 0;
 
       // make sure we have a couple of good readings before declaring the way safe
-      if (counter >= 3){
+      if (counter >= 1){
         navigation_state = HOLD;
       }
       counter++;
