@@ -53,6 +53,7 @@ enum navigation_state_t {
   ORANGE_SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS
 };
+int varr = 2;
 
 // define and initialise global variables
 float oa_color_count_frac = 0.16f;
@@ -88,7 +89,6 @@ float flow_center_mav;
 float flow_right_mav;
 float flow_noise_threshold = 300;
 float min_move_dist = 0.5;
-int min_momentum = 0;
 int turn_decision = 7;
 int turn_cap = 10;
 float out_of_bounds_dheading = 40.0;
@@ -152,11 +152,18 @@ void mav_exercise_init(void) {
   //PRINT("out_of_bounds_dheading: %f turn_cap: %d turn_decision: %d flow_noise_threshold: %f \n", out_of_bounds_dheading, turn_cap, turn_decision, flow_noise_threshold);
 }
 
-void momentum_calc(float total_flow, float flow_difference, float full_flow, bool left_is_smallest, bool right_is_smallest) {
 
-  float full_flow_factor = full_flow / total_flow;
+/**
+ * Run the optical flow with fast9 and lukaskanade on a new image frame
+ * @param[in] mid_flow: optic flow value in the middle of the picture
+ * @param[in] flow_difference: difference in magnitude of flow valules between left and right quadrants of the image
+ * @param[in] full_flow: total flow (absolute) value
+ * @param[in] left_is_smallest:  boolean to indicate if the left quadrant has the smallest flow value
+ * @param[in] right_is_smallest:  boolean to indicate if the right quadrant has the smallest flow value
+ */
+void momentum_calc(float mid_flow, float flow_difference, float full_flow, bool left_is_smallest, bool right_is_smallest) {
 
-  if (((total_flow>total_thresh) && (flow_difference<diff_thresh)) || (full_flow_factor <= 2) || (full_flow < 50) || (total_flow < 5))
+  if (((mid_flow>total_thresh) && (flow_difference<diff_thresh)) || (full_flow < 50) || (mid_flow < 5))
   {
     rotate_90 +=2;
     turn_right -= 1;
@@ -218,24 +225,6 @@ void mav_exercise_periodic(void) {
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
 
-
-  // float flow;
-  // // exponentially weighted moving average to smooth flow values
-  // for (int j=0;j<3;j++){
-  //   if(j==0){flow = flow_left_mav;}
-  //   else if (j==1){flow = flow_center_mav;}
-  //   else if (j==2){flow = flow_right_mav;}
-
-  //   s_cur[j] = rho * s_prev[j] + (1.0-rho) * flow;
-  //   s_cur_bc[j] = s_cur[j]/(1.0-pow(rho,(i+1)));
-
-  //   s_prev[j] = s_cur[j];
-  // }
-  // s_cur[0] = rho * s_prev[0] + (1.0-rho) * flow_left_mav;
-  // s_cur_bc[0] = s_cur[0]/(1.0-pow(rho,(i+1)));
-
-  // s_prev[0] = s_cur[0];
-
   float total_flow = fabs(flow_center_mav);
   float flow_difference = fabs(fabs(flow_left_mav) - fabs(flow_right_mav));
   float full_flow = (fabs(flow_center_mav) + fabs(flow_left_mav) + fabs(flow_right_mav));
@@ -250,7 +239,6 @@ void mav_exercise_periodic(void) {
 
   switch (navigation_state){
     case SAFE:
-      #if 0
       if (test){
         counter++;
         if (counter>counter_threshold){
@@ -262,36 +250,11 @@ void mav_exercise_periodic(void) {
         }
         if (counter < 4)
         {turn_left -= 100; turn_right -= 100; stay_center -= 100; rotate_90 -= 100;}
-        moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
 
-        if ((total_flow>total_thresh) && (flow_difference<diff_thresh)){
-          rotate_90 +=2;
-          turn_right -= 1;
-          turn_left -=1;
-          stay_center -=1;
-          // PRINT("Turn around\n\n");
-        }
-        else if (left_is_smallest && (flow_difference>diff_thresh)) {
-          turn_left += 2;
-          turn_right -=1;
-          stay_center -=1;
-          rotate_90 -=1;
-          // PRINT("Left\n\n");
-        }
-        else if (right_is_smallest && (flow_difference>diff_thresh)) {
-          turn_right += 2;
-          turn_left -=1;
-          stay_center -=1;
-          rotate_90 -=1;
-          // PRINT("Right\n\n");
-        }
-        else {
-          stay_center +=2;
-          rotate_90 -=1;
-          turn_right -= 1;
-          turn_left -=1;
-          // PRINT("Center\n\n");
-        }    
+        moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
+        
+        momentum_calc(total_flow, flow_difference, full_flow, left_is_smallest, right_is_smallest);
+
 
         Bound(turn_left, 0, turn_cap);
         Bound(turn_right, 0, turn_cap);
@@ -332,7 +295,6 @@ void mav_exercise_periodic(void) {
       // ------------------------------------------------------
       // ------------------------------------------------------
       else
-      #endif
       {
         PRINT("STATE: SAFE\n\n\n");
         
@@ -361,7 +323,7 @@ void mav_exercise_periodic(void) {
         //   PRINT("SELECTED staying center\n");
         // }
         // Move waypoint forward
-        moveWaypointForward(WP_TRAJECTORY, 1.2f * moveDistance);
+        moveWaypointForward(WP_TRAJECTORY, 1.8f * moveDistance);
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
           navigation_state = OUT_OF_BOUNDS;
           //PRINT("Out of Bounds\n\n");
@@ -422,7 +384,7 @@ void mav_exercise_periodic(void) {
       PRINT("STATE: TURN_LEFT\n\n");
       increase_nav_heading(-1*heading_increment);
       counter_hold = 0;
-      // make sure we have a couple of good readings before declaring the way safe
+      
       if (counter >= 1){
       navigation_state = HOLD;
       }
@@ -433,7 +395,7 @@ void mav_exercise_periodic(void) {
       PRINT("STATE: TURN_RIGHT\n\n");
       increase_nav_heading(1*heading_increment);
       counter_hold = 0;
-      // make sure we have a couple of good readings before declaring the way safe
+
       if (counter >= 1){
       navigation_state = HOLD;
       }
@@ -442,18 +404,20 @@ void mav_exercise_periodic(void) {
 
     case TURN_AROUND:
       PRINT("STATE: TURN_AROUND\n\n");
-      if(counter<2){
+      if(counter<varr){
         // move back
         moveWaypointForward(WP_GOAL, -1.0f);
         PRINT("GOAL MOVED BACK\n\n");
       } 
-      else if(counter == 2) {
+      else if(counter == varr) {
         moveWaypointForward(WP_GOAL, 0.0f);
-        if (left_is_smallest){increase_nav_heading(-90);}
-        else if (right_is_smallest){increase_nav_heading(90);}
+        // if (left_is_smallest){increase_nav_heading(-90);}
+        // else {increase_nav_heading(90);}
+        increase_nav_heading(90);
+        // moveWaypointForward(WP_GOAL, 1.0f);
         PRINT("GOAL STILL+TURN\n\n");
       }
-      // make sure we have a couple of good readings before declaring the way safe
+      
       else {
         //moveWaypointForward(WP_TRAJECTORY, 0.8f);
         counter_hold = 0;
@@ -464,11 +428,8 @@ void mav_exercise_periodic(void) {
 
     case HOLD:
       PRINT("STATE: HOLD\n\n\n");
-      // make sure we have a couple of good readings before declaring the way safe
-      // update our safe confidence using color threshold
-      momentum_calc(total_flow, flow_difference, full_flow, left_is_smallest, right_is_smallest);
-
-      if (counter_hold >= 2){
+      
+      if (counter_hold >= 1){
       navigation_state = SAFE;
       }
       counter_hold++;
@@ -476,20 +437,19 @@ void mav_exercise_periodic(void) {
 
     case SEARCH_FOR_SAFE_HEADING:
       PRINT("STATE: SEARCH_FOR_SAFE_HEADING\n\n");
-      //increase_nav_heading(40);
+      moveWaypointForward(WP_GOAL, 0.0f);
 
-      // make sure we have a couple of good readings before declaring the way safe
       if (counter >= 1){
         navigation_state = SAFE;
       }
       counter ++;
       break;
     case ORANGE_SEARCH_FOR_SAFE_HEADING:
-       PRINT("STATE: ORANGE_SEARCH_FOR_SAFE_HEADING\n\n");
+      PRINT("STATE: ORANGE_SEARCH_FOR_SAFE_HEADING\n\n");
       moveWaypointForward(WP_GOAL, 0.0f);
       increase_nav_heading(orange_heading_increment);
 
-      // make sure we have a couple of good readings before declaring the way safe
+      // make sure we have a couple of good orange color readings before declaring the way safe
       if (obstacle_free_confidence >= 2){
         navigation_state = HOLD;
       }
@@ -502,12 +462,11 @@ void mav_exercise_periodic(void) {
 
       if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         // add offset to head back into arena
-        //increase_nav_heading(120);
         // reset safe counter
-        turn_left = min_momentum;
-        turn_right = min_momentum;
+        turn_left = 0;
+        turn_right = 0;
         stay_center = 0;
-        rotate_90 = min_momentum;
+        rotate_90 = 0;
         turn = 0;
         counter = 0;
         // ensure direction is safe before continuing
