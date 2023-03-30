@@ -68,7 +68,7 @@ float moveDistance = 1.0;               // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
-float heading_increment = 20.f;
+float heading_increment = 28.0f;
 float orange_heading_increment = 5.f;
 float turn_around_increment = 20.f;
 // float divergence_threshold = 0.3f;
@@ -79,7 +79,7 @@ int counter_threshold = 20;
 float total_flow = 0;
 float flow_diff;
   
-int test = 1;
+int test = 0;
 int rotate = 0;
 float thresh_1 = 50.0;
 float thresh_2 = 50.0;

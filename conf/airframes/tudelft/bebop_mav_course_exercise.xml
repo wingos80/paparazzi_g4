@@ -43,7 +43,7 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
 
     <!-- Detect white -->
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="180"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="150"/>
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="100"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="160"/>
