@@ -58,7 +58,7 @@ enum color_t {
   ORANGE,
   WHITE
 };
-int varr = 2;
+int varr = 5;
 
 // define and initialise global variables
 float oa_color_count_frac = 0.20f;
@@ -72,7 +72,7 @@ int16_t color_free_confidence = 0;   // a measure of how certain we are that the
 enum color_t color = ORANGE;
 int16_t orange_y = 0;
 int16_t white_y = 0;
-float moveDistance = 1.0;               // waypoint displacement [m]
+float moveDistance = 0.7;               // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
@@ -103,8 +103,8 @@ float flow_center_mav;
 float flow_right_mav;
 float flow_noise_threshold = 300;
 float min_move_dist = 0.5;
-int turn_decision = 14;
-int turn_cap = 20;
+int turn_decision = 10;
+int turn_cap = 16;
 float out_of_bounds_dheading = 40.0;
 
 float rotate_90 = 0;
@@ -187,7 +187,7 @@ void momentum_calc(float mid_flow, float flow_difference, float full_flow, bool 
     turn_right -= 1;
     turn_left -=1;
     stay_center -=1;
-    //PRINT("DETECTED Turn around\n\n");
+    PRINT("DETECTED Turn around\n\n");
   }
   else if (left_is_smallest && (flow_difference>diff_thresh) && fabs(flow_left_mav) > 10)
   {
@@ -195,7 +195,7 @@ void momentum_calc(float mid_flow, float flow_difference, float full_flow, bool 
     turn_right -=1;
     stay_center -=1;
     rotate_90 -=1;
-    //PRINT("DETECTED Left\n\n");
+    PRINT("DETECTED Left\n\n");
   }
   else if (right_is_smallest && (flow_difference>diff_thresh) && fabs(flow_right_mav) > 10)
   {
@@ -203,14 +203,14 @@ void momentum_calc(float mid_flow, float flow_difference, float full_flow, bool 
     turn_left -=1;
     stay_center -=1;
     rotate_90 -=1;
-    //PRINT("DETECTED Right\n\n");
+    PRINT("DETECTED Right\n\n");
   }
   else {
     stay_center +=2;
     rotate_90 -=1;
     turn_right -= 1;
     turn_left -=1;
-    ///PRINT("DETECTED Center\n\n");
+    PRINT("DETECTED Center\n\n");
   } 
   
 
@@ -255,8 +255,8 @@ void calc_color_free_conf(void)
     color_free_confidence = w_obs_free_confidence;
     color = WHITE;
   }
-  PRINT("Orange -- Color_count: %d  threshold: %d \n\n", color_count1, orange_count_threshold);
-  PRINT("White  -- Color_count: %d  threshold: %d \n\n", color_count2, white_count_threshold);
+  // PRINT("Orange -- Color_count: %d  threshold: %d \n\n", color_count1, orange_count_threshold);
+  // PRINT("White  -- Color_count: %d  threshold: %d \n\n", color_count2, white_count_threshold);
 }
 
 void mav_exercise_periodic(void) {
@@ -275,8 +275,8 @@ void mav_exercise_periodic(void) {
   bool left_is_smallest = (fabs(flow_left_mav) < fabs(flow_center_mav)) && (fabs(flow_left_mav) < fabs(flow_right_mav));
 
 
-  // PRINT("Flow left =  %f, center =  %f, right =  %f\n", flow_left_mav, flow_center_mav, flow_right_mav);
-  // PRINT("Total Flow =  %f, Flow diff =  %f, low_total =  %f, factor = %f\n", total_flow, flow_difference,full_flow, full_flow_factor);
+  PRINT("Flow left =  %f, center =  %f, right =  %f\n", flow_left_mav, flow_center_mav, flow_right_mav);
+  PRINT("Total Flow =  %f, Flow diff =  %f, low_total =  %f\n", total_flow, flow_difference,full_flow);
   calc_color_free_conf();
 
 
@@ -358,14 +358,14 @@ void mav_exercise_periodic(void) {
         // }
         // Move waypoint forward
         moveWaypointForward(WP_TRAJECTORY, 0.8f * moveDistance);
-        if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-          navigation_state = OUT_OF_BOUNDS;
-          //PRINT("Out of Bounds\n\n");
-        } else if (color_free_confidence == 0){
+        if (color_free_confidence == 0){
           navigation_state = COLOR_FOUND;
         } else if (turn >= stay_center && turn >= turn_decision){
           navigation_state = OBSTACLE_FOUND;
           //PRINT("Obstacle Found\n\n");
+        } else if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+          navigation_state = OUT_OF_BOUNDS;
+          //PRINT("Out of Bounds\n\n");
         } else {
           moveWaypointForward(WP_GOAL, moveDistance);
           navigation_state = SAFE;
@@ -419,7 +419,7 @@ void mav_exercise_periodic(void) {
       increase_nav_heading(-1*heading_increment);
       counter_hold = 0;
       
-      if (counter >= 4){
+      if (counter >= 8){
       navigation_state = HOLD;
       }
       counter++;
@@ -430,7 +430,7 @@ void mav_exercise_periodic(void) {
       increase_nav_heading(1*heading_increment);
       counter_hold = 0;
 
-      if (counter >= 4){
+      if (counter >= 8){
       navigation_state = HOLD;
       }
       counter++;
