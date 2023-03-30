@@ -77,7 +77,9 @@ float oob_haeding_increment = 5.f;      // heading angle increment if out of bou
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 float heading_increment = 30.0f;
-float orange_heading_increment = 5.f;
+float orange_heading_increment = 10.f;
+float white_heading_increment = 20.f;
+float color_heading_increment = 10.f;
 float turn_around_increment = 20.f;
 // float divergence_threshold = 0.3f;
 float size_div = 0;
@@ -482,16 +484,18 @@ void mav_exercise_periodic(void) {
       int16_t color_y;
       if(color==ORANGE){
         color_y = orange_y;
+        color_heading_increment = orange_heading_increment;
       }
       else{
         color_y = white_y;
+        color_heading_increment = white_heading_increment;
       }
       
       if(color_y > 0) {
-        increase_nav_heading(orange_heading_increment);
+        increase_nav_heading(color_heading_increment);
       }
       else{
-        increase_nav_heading(-orange_heading_increment);
+        increase_nav_heading(-color_heading_increment);
       }
       // make sure we have a couple of good orange color readings before declaring the way safe
       if (color_free_confidence >= 2){
