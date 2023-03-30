@@ -20,12 +20,13 @@
 
 
       <!-- Detect white -->
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="255"/>
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="200"/>
-      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="110"/>
-      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="140"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="110"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="140"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="180"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="160"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="160"/>
+ 
 
     </target>
     <target name="nps" board="pc">
@@ -41,13 +42,14 @@
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="134"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
 
-      <!-- Detect white -->
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="255"/>
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="200"/>
-      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="110"/>
-      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="140"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="110"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="140"/>
+    <!-- Detect white -->
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="180"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="160"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="160"/>
+ 
 
     </target>
     

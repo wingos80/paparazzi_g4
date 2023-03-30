@@ -72,9 +72,12 @@ bool cod_draw2 = false;
 
 // define global variables
 struct color_object_t {
-  int32_t x_c;
-  int32_t y_c;
-  uint32_t color_count;
+  int32_t x_c1;
+  int32_t y_c1;
+  int32_t x_c2;
+  int32_t y_c2;
+  uint32_t color_count1;
+  uint32_t color_count2;
   bool updated;
 };
 struct color_object_t global_filters[2];
@@ -93,46 +96,57 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
  */
 static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 {
-  uint8_t lum_min, lum_max;
-  uint8_t cb_min, cb_max;
-  uint8_t cr_min, cr_max;
+  uint8_t lum_min1, lum_max1;
+  uint8_t cb_min1, cb_max1;
+  uint8_t cr_min1, cr_max1;
+  
+  uint8_t lum_min2, lum_max2;
+  uint8_t cb_min2, cb_max2;
+  uint8_t cr_min2, cr_max2;
+
   bool draw;
 
   switch (filter){
     case 1:
-      lum_min = cod_lum_min1;
-      lum_max = cod_lum_max1;
-      cb_min = cod_cb_min1;
-      cb_max = cod_cb_max1;
-      cr_min = cod_cr_min1;
-      cr_max = cod_cr_max1;
+      lum_min1 = cod_lum_min1;
+      lum_max1 = cod_lum_max1;
+      cb_min1 = cod_cb_min1;
+      cb_max1 = cod_cb_max1;
+      cr_min1 = cod_cr_min1;
+      cr_max1 = cod_cr_max1;
       draw = cod_draw1;
-      break;
-    case 2:
-      lum_min = cod_lum_min2;
-      lum_max = cod_lum_max2;
-      cb_min = cod_cb_min2;
-      cb_max = cod_cb_max2;
-      cr_min = cod_cr_min2;
-      cr_max = cod_cr_max2;
+
+      lum_min2 = cod_lum_min2;
+      lum_max2 = cod_lum_max2;
+      cb_min2 = cod_cb_min2;
+      cb_max2 = cod_cb_max2;
+      cr_min2 = cod_cr_min2;
+      cr_max2 = cod_cr_max2;
       draw = cod_draw2;
       break;
     default:
       return img;
   };
 
-  int32_t x_c, y_c;
+  int32_t x_c1, y_c1;
+  int32_t x_c2, y_c2;
 
   // Filter and find centroid
-  uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max);
-  VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
+  uint32_t count1 = find_object_centroid(img, &x_c1, &y_c1, draw, lum_min1, lum_max1, cb_min1, cb_max1, cr_min1, cr_max1);
+  uint32_t count2 = find_object_centroid(img, &x_c2, &y_c2, draw, lum_min2, lum_max2, cb_min2, cb_max2, cr_min2, cr_max2);
+
+  
+  /* VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
-        hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
+        hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c))); */
 
   pthread_mutex_lock(&mutex);
-  global_filters[filter-1].color_count = count;
-  global_filters[filter-1].x_c = x_c;
-  global_filters[filter-1].y_c = y_c;
+  global_filters[filter-1].color_count1 = count1;
+  global_filters[filter-1].color_count2 = count2;
+  global_filters[filter-1].x_c1 = x_c1;
+  global_filters[filter-1].y_c1 = y_c1;
+  global_filters[filter-1].x_c2 = x_c2;
+  global_filters[filter-1].y_c2 = y_c2;
   global_filters[filter-1].updated = true;
   pthread_mutex_unlock(&mutex);
 
@@ -163,6 +177,12 @@ void color_object_detector_init(void)
   cod_cb_max1 = COLOR_OBJECT_DETECTOR_CB_MAX1;
   cod_cr_min1 = COLOR_OBJECT_DETECTOR_CR_MIN1;
   cod_cr_max1 = COLOR_OBJECT_DETECTOR_CR_MAX1;
+  cod_lum_min2 = COLOR_OBJECT_DETECTOR_LUM_MIN2;
+  cod_lum_max2 = COLOR_OBJECT_DETECTOR_LUM_MAX2;
+  cod_cb_min2 = COLOR_OBJECT_DETECTOR_CB_MIN2;
+  cod_cb_max2 = COLOR_OBJECT_DETECTOR_CB_MAX2;
+  cod_cr_min2 = COLOR_OBJECT_DETECTOR_CR_MIN2;
+  cod_cr_max2 = COLOR_OBJECT_DETECTOR_CR_MAX2;
 #endif
 #ifdef COLOR_OBJECT_DETECTOR_DRAW1
   cod_draw1 = COLOR_OBJECT_DETECTOR_DRAW1;
@@ -264,13 +284,13 @@ void color_object_detector_periodic(void)
   pthread_mutex_unlock(&mutex);
 
   if(local_filters[0].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
-        0, 0, local_filters[0].color_count, 0);
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c1, local_filters[0].y_c1,
+        local_filters[0].x_c2, local_filters[0].y_c2, local_filters[0].color_count1, local_filters[0].color_count2);
     local_filters[0].updated = false;
   }
   if(local_filters[1].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
-        0, 0, local_filters[1].color_count, 1);
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c1, local_filters[1].y_c1,
+        0, 0, local_filters[1].color_count1, 1);
     local_filters[1].updated = false;
   }
 }

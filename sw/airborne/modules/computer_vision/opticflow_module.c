@@ -383,7 +383,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   //   div_coloring(&cropped_img, turn);
   //   glue_img(&sections_img_p[index], &final_img, section_w, section_h, index);   
   // }
-  div_coloring(&cropped_img, turn);
-  img = &cropped_img;
+  // div_coloring(&cropped_img, turn);
+  //img = &cropped_img;
   return img;
   }

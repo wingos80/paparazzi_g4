@@ -43,23 +43,27 @@ float RotateCenterArena(void);
 
 enum navigation_state_t {
   SAFE,
-  ORANGE_FOUND,
+  COLOR_FOUND,
   OBSTACLE_FOUND,
   TURN_LEFT,
   TURN_RIGHT,
   TURN_AROUND,
   HOLD,
   SEARCH_FOR_SAFE_HEADING,
-  ORANGE_SEARCH_FOR_SAFE_HEADING,
+  COLOR_SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS
 };
 int varr = 2;
 
 // define and initialise global variables
 float oa_color_count_frac = 0.16f;
+float wa_color_count_frac = 0.70f;
 enum navigation_state_t navigation_state = SAFE;
-int32_t color_count = 0;               // orange color count from color filter for obstacle detection
-int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
+int32_t color_count1 = 0;               // orange color count from color filter for obstacle detection
+int32_t color_count2 = 0;               // white color count from color filter for obstacle detection
+int16_t o_obs_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
+int16_t w_obs_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
+int16_t color_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
 float moveDistance = 1.0;               // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
@@ -115,11 +119,12 @@ float diff_thresh = 116;
 
 static abi_event color_detection_ev;
 static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
-                               int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
-                               int16_t __attribute__((unused)) pixel_width,
-                               int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra) {
-  color_count = quality;
+                               int16_t __attribute__((unused)) pixel_x1, int16_t __attribute__((unused)) pixel_y1,
+                               int16_t __attribute__((unused)) pixel_x2,
+                               int16_t __attribute__((unused)) pixel_y2,
+                               int32_t quality1, int32_t quality2) {
+  color_count1 = quality1;
+  color_count2 = quality2;
 }
 
 
@@ -203,27 +208,43 @@ void momentum_calc(float mid_flow, float flow_difference, float full_flow, bool 
   
 }
 
+void calc_color_free_conf(void)
+{
+  // compute current color thresholds
+  // front_camera defined in airframe xml, with the video_capture module
+  int32_t orange_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+  int32_t white_count_threshold = wa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+
+  // update our safe confidence using color threshold for orange
+  if(color_count1 < orange_count_threshold){
+    o_obs_free_confidence++;
+  } else {
+    o_obs_free_confidence -= 2;  // be more cautious with positive obstacle detections
+  }
+    
+  // bound o_obs_free_confidence
+  Bound(o_obs_free_confidence, 0, max_trajectory_confidence);
+  
+  // update our safe confidence using color threshold for white
+  if(color_count2 < white_count_threshold){
+    w_obs_free_confidence++;
+  } else {
+    w_obs_free_confidence -= 2;  // be more cautious with positive obstacle detections
+  }
+    
+  // bound o_obs_free_confidence
+  Bound(w_obs_free_confidence, 0, max_trajectory_confidence);
+  color_free_confidence = fmin(o_obs_free_confidence,w_obs_free_confidence);
+  PRINT("Color_count: %d  threshold: %d \n\n", color_count2, white_count_threshold);
+}
+
 void mav_exercise_periodic(void) {
   // only evaluate our state machine if we are flying
   if (!autopilot_in_flight()) {
     return;
   }
-  // compute current color thresholds
-  // front_camera defined in airframe xml, with the video_capture module
-  int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-
+  
   //PRINT("Color_count: %d  threshold: %d state: %d \n\n", color_count, color_count_threshold, navigation_state);
-
-// update our safe confidence using color threshold
-  if(color_count < color_count_threshold){
-    obstacle_free_confidence++;
-  } else {
-    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
-  }
-
-  // bound obstacle_free_confidence
-  Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
-
 
   float total_flow = fabs(flow_center_mav);
   float flow_difference = fabs(fabs(flow_left_mav) - fabs(flow_right_mav));
@@ -235,11 +256,14 @@ void mav_exercise_periodic(void) {
 
   // PRINT("Flow left =  %f, center =  %f, right =  %f\n", flow_left_mav, flow_center_mav, flow_right_mav);
   // PRINT("Total Flow =  %f, Flow diff =  %f, low_total =  %f, factor = %f\n", total_flow, flow_difference,full_flow, full_flow_factor);
+  calc_color_free_conf();
 
 
   switch (navigation_state){
     case SAFE:
       if (test){
+        calc_color_free_conf();
+
         counter++;
         if (counter>counter_threshold){
           // PRINT("\n\n\n\n\n\n\n\n")
@@ -266,7 +290,7 @@ void mav_exercise_periodic(void) {
         turn = fmaxf(turn_left, turn_right);
         turn = fmaxf(turn, rotate_90);
 
-        PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
+        //PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
         if (turn_left > turn_right){
           PRINT("turning left\n");
         } else if (turn_right > turn_left){
@@ -297,17 +321,6 @@ void mav_exercise_periodic(void) {
       else
       {
         PRINT("STATE: SAFE\n\n\n");
-        
-        // update our safe confidence using color threshold
-        if(color_count < color_count_threshold){
-          obstacle_free_confidence++;
-        } else {
-          obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
-        }
-         
-        // bound obstacle_free_confidence
-        Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
-        
         momentum_calc(total_flow, flow_difference, full_flow, left_is_smallest, right_is_smallest);
 
         turn = fmaxf(turn_left, turn_right);
@@ -327,8 +340,8 @@ void mav_exercise_periodic(void) {
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
           navigation_state = OUT_OF_BOUNDS;
           //PRINT("Out of Bounds\n\n");
-        } else if (obstacle_free_confidence == 0){
-        navigation_state = ORANGE_FOUND;
+        } else if (color_free_confidence == 0){
+          navigation_state = COLOR_FOUND;
         } else if (turn >= stay_center && turn >= turn_decision){
           navigation_state = OBSTACLE_FOUND;
           //PRINT("Obstacle Found\n\n");
@@ -339,8 +352,8 @@ void mav_exercise_periodic(void) {
         }
       }
       break;
-    case ORANGE_FOUND:
-      PRINT("STATE: ORANGE_FOUND\n\n");
+    case COLOR_FOUND:
+      PRINT("STATE: COLOR_FOUND\n\n");
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -348,7 +361,7 @@ void mav_exercise_periodic(void) {
       // randomly select new search direction
       chooseRandomIncrementAvoidance();
 
-      navigation_state = ORANGE_SEARCH_FOR_SAFE_HEADING;
+      navigation_state = COLOR_SEARCH_FOR_SAFE_HEADING;
 
       break;
     case OBSTACLE_FOUND:
@@ -444,13 +457,13 @@ void mav_exercise_periodic(void) {
       }
       counter ++;
       break;
-    case ORANGE_SEARCH_FOR_SAFE_HEADING:
-      PRINT("STATE: ORANGE_SEARCH_FOR_SAFE_HEADING\n\n");
+    case COLOR_SEARCH_FOR_SAFE_HEADING:
+      PRINT("STATE: COLOR_SEARCH_FOR_SAFE_HEADING\n\n");
       moveWaypointForward(WP_GOAL, 0.0f);
       increase_nav_heading(orange_heading_increment);
 
       // make sure we have a couple of good orange color readings before declaring the way safe
-      if (obstacle_free_confidence >= 2){
+      if (color_free_confidence >= 2){
         navigation_state = HOLD;
       }
       break;
