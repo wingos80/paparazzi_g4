@@ -53,22 +53,30 @@ enum navigation_state_t {
   COLOR_SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS
 };
+
+enum color_t {
+  ORANGE,
+  WHITE
+};
 int varr = 2;
 
 // define and initialise global variables
-float oa_color_count_frac = 0.16f;
-float wa_color_count_frac = 0.70f;
+float oa_color_count_frac = 0.20f;
+float wa_color_count_frac = 0.50f;
 enum navigation_state_t navigation_state = SAFE;
 int32_t color_count1 = 0;               // orange color count from color filter for obstacle detection
 int32_t color_count2 = 0;               // white color count from color filter for obstacle detection
 int16_t o_obs_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
 int16_t w_obs_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
 int16_t color_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
+enum color_t color = ORANGE;
+int16_t orange_y = 0;
+int16_t white_y = 0;
 float moveDistance = 1.0;               // waypoint displacement [m]
 float oob_haeding_increment = 5.f;      // heading angle increment if out of bounds [deg]
 float obstacle_heading_increment = 15.f;
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
-float heading_increment = 28.0f;
+float heading_increment = 30.0f;
 float orange_heading_increment = 5.f;
 float turn_around_increment = 20.f;
 // float divergence_threshold = 0.3f;
@@ -93,8 +101,8 @@ float flow_center_mav;
 float flow_right_mav;
 float flow_noise_threshold = 300;
 float min_move_dist = 0.5;
-int turn_decision = 7;
-int turn_cap = 10;
+int turn_decision = 14;
+int turn_cap = 20;
 float out_of_bounds_dheading = 40.0;
 
 float rotate_90 = 0;
@@ -104,8 +112,8 @@ float y_init = 0;
 int nav_heading_int;
 
 // // expoenentially weighted moving average params
-float total_thresh = 100;
-float diff_thresh = 116;
+float total_thresh = 150;
+float diff_thresh = 100;
 
 
 // needed to receive output from a separate module running on a parallel process
@@ -119,12 +127,15 @@ float diff_thresh = 116;
 
 static abi_event color_detection_ev;
 static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
-                               int16_t __attribute__((unused)) pixel_x1, int16_t __attribute__((unused)) pixel_y1,
+                               int16_t __attribute__((unused)) pixel_x1, int16_t pixel_y1,
                                int16_t __attribute__((unused)) pixel_x2,
-                               int16_t __attribute__((unused)) pixel_y2,
+                               int16_t pixel_y2,
                                int32_t quality1, int32_t quality2) {
   color_count1 = quality1;
   color_count2 = quality2;
+
+  orange_y = pixel_y1;
+  white_y = pixel_y2;
 }
 
 
@@ -168,7 +179,7 @@ void mav_exercise_init(void) {
  */
 void momentum_calc(float mid_flow, float flow_difference, float full_flow, bool left_is_smallest, bool right_is_smallest) {
 
-  if (((mid_flow>total_thresh) && (flow_difference<diff_thresh)) || (full_flow < 50) || (mid_flow < 5))
+  if (((mid_flow>total_thresh) && (flow_difference<diff_thresh)) )//|| (full_flow < 50))//|| (mid_flow < 5))
   {
     rotate_90 +=2;
     turn_right -= 1;
@@ -234,8 +245,16 @@ void calc_color_free_conf(void)
     
   // bound o_obs_free_confidence
   Bound(w_obs_free_confidence, 0, max_trajectory_confidence);
-  color_free_confidence = fmin(o_obs_free_confidence,w_obs_free_confidence);
-  PRINT("Color_count: %d  threshold: %d \n\n", color_count2, white_count_threshold);
+  if(o_obs_free_confidence < w_obs_free_confidence){
+      color_free_confidence = o_obs_free_confidence;
+      color = ORANGE;
+  }
+  else{
+    color_free_confidence = w_obs_free_confidence;
+    color = WHITE;
+  }
+  PRINT("Orange -- Color_count: %d  threshold: %d \n\n", color_count1, orange_count_threshold);
+  PRINT("White  -- Color_count: %d  threshold: %d \n\n", color_count2, white_count_threshold);
 }
 
 void mav_exercise_periodic(void) {
@@ -262,12 +281,12 @@ void mav_exercise_periodic(void) {
   switch (navigation_state){
     case SAFE:
       if (test){
-        calc_color_free_conf();
-
+        //calc_color_free_conf();
+        PRINT("orange y: %d\n\n", orange_y);
         counter++;
         if (counter>counter_threshold){
           // PRINT("\n\n\n\n\n\n\n\n")
-          PRINT("         ***period change***\n");
+          //PRINT("         ***period change***\n");
           moveDistance = -moveDistance;
           counter = 0;
           turn_left -= 100; turn_right -= 100; stay_center -= 100; rotate_90 -= 100;            
@@ -292,25 +311,25 @@ void mav_exercise_periodic(void) {
 
         //PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
         if (turn_left > turn_right){
-          PRINT("turning left\n");
+          //PRINT("turning left\n");
         } else if (turn_right > turn_left){
-          PRINT("turning right\n");
+          //PRINT("turning right\n");
         } else if (rotate_90 >= turn){
-          PRINT("rotating 90\n");
+          //PRINT("rotating 90\n");
         } else {
-          PRINT("staying center\n");
+          //PRINT("staying center\n");
         }
 
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-          PRINT("Out of Bounds\n\n");
+          //PRINT("Out of Bounds\n\n");
         } else if (turn >= stay_center && turn >= turn_decision){
-          PRINT("Obstacle Found\n\n");
+          //PRINT("Obstacle Found\n\n");
         } else {
-          PRINT("SAFE\n\n");
+          //("SAFE\n\n");
         }
 
 
-        PRINT("       ------------------------------------------------\n\n\n");
+        //PRINT("       ------------------------------------------------\n\n\n");
         break;
       }
       // ------------------------------------------------------
@@ -336,7 +355,7 @@ void mav_exercise_periodic(void) {
         //   PRINT("SELECTED staying center\n");
         // }
         // Move waypoint forward
-        moveWaypointForward(WP_TRAJECTORY, 1.8f * moveDistance);
+        moveWaypointForward(WP_TRAJECTORY, 0.8f * moveDistance);
         if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
           navigation_state = OUT_OF_BOUNDS;
           //PRINT("Out of Bounds\n\n");
@@ -353,7 +372,7 @@ void mav_exercise_periodic(void) {
       }
       break;
     case COLOR_FOUND:
-      PRINT("STATE: COLOR_FOUND\n\n");
+      PRINT("STATE: COLOR_FOUND-- %d (0=orange)\n\n",color);
       // stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
@@ -398,7 +417,7 @@ void mav_exercise_periodic(void) {
       increase_nav_heading(-1*heading_increment);
       counter_hold = 0;
       
-      if (counter >= 1){
+      if (counter >= 4){
       navigation_state = HOLD;
       }
       counter++;
@@ -409,7 +428,7 @@ void mav_exercise_periodic(void) {
       increase_nav_heading(1*heading_increment);
       counter_hold = 0;
 
-      if (counter >= 1){
+      if (counter >= 4){
       navigation_state = HOLD;
       }
       counter++;
@@ -442,7 +461,7 @@ void mav_exercise_periodic(void) {
     case HOLD:
       PRINT("STATE: HOLD\n\n\n");
       
-      if (counter_hold >= 1){
+      if (counter_hold >= 3){
       navigation_state = SAFE;
       }
       counter_hold++;
@@ -460,8 +479,20 @@ void mav_exercise_periodic(void) {
     case COLOR_SEARCH_FOR_SAFE_HEADING:
       PRINT("STATE: COLOR_SEARCH_FOR_SAFE_HEADING\n\n");
       moveWaypointForward(WP_GOAL, 0.0f);
-      increase_nav_heading(orange_heading_increment);
-
+      int16_t color_y;
+      if(color==ORANGE){
+        color_y = orange_y;
+      }
+      else{
+        color_y = white_y;
+      }
+      
+      if(color_y > 0) {
+        increase_nav_heading(orange_heading_increment);
+      }
+      else{
+        increase_nav_heading(-orange_heading_increment);
+      }
       // make sure we have a couple of good orange color readings before declaring the way safe
       if (color_free_confidence >= 2){
         navigation_state = HOLD;
