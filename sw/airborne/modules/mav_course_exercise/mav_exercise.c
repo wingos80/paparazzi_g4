@@ -125,14 +125,14 @@ int turn_cap = 16;                     // maximum value a turn confidence variab
 float x_init = 0; // stores the x coordinate of the drone at initialization
 float y_init = 0; // stores the y coordinate of the drone at initialization
 
-float psuedo_div = 0;     // stores the optical flow of the central section of the image / psuedo divergence
-float flow_diff;          // stores the optical flow difference between left and right side of the image
-float flow_left_mav;      // stores the optical flow of the left section of the image
-float flow_center_mav;    // stores the optical flow of the central section of the image
-float flow_right_mav;     // stores the optical flow of the right section of the image
-float total_thresh = 150; // threshold value for psuedo divergence where the drone decides to turn around
-float diff_thresh = 100;  // theshold value for the optical flow difference between left and right sections
-
+float psuedo_div = 0;             // stores the optical flow of the central section of the image / psuedo divergence
+float flow_diff;                  // stores the optical flow difference between left and right side of the image
+float flow_left_mav;              // stores the optical flow of the left section of the image
+float flow_center_mav;            // stores the optical flow of the central section of the image
+float flow_right_mav;             // stores the optical flow of the right section of the image
+float total_thresh = 150;         // threshold value for psuedo divergence where the drone decides to turn around
+float diff_thresh = 100;          // theshold value for the optical flow difference between left and right sections
+float flow_noise_threshold = 300; // threshold for flow noise
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST

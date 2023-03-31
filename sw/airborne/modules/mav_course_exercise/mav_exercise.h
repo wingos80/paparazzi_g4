@@ -36,9 +36,8 @@ extern int test;
 extern float heading_increment;
 extern float total_thresh;
 extern float diff_thresh;
-extern int varr;
 
 extern float oa_color_count_frac;
 extern float wa_color_count_frac;
 
-#endif //PAPARAZZI_MAV_EXERCISE_H
+#endif // PAPARAZZI_MAV_EXERCISE_H
