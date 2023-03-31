@@ -25,5 +25,19 @@ extern void mav_exercise_init(void);
 extern void mav_exercise_periodic(void);
 
 // settings
-extern float divergence_threshold;
-#endif //PAPARAZZI_MAV_EXERCISE_H
+extern float flow_noise_threshold;
+extern float moveDistance;
+extern int min_momentum;
+extern int turn_decision;
+extern int turn_cap;
+extern float out_of_bounds_dheading;
+extern int counter_threshold;
+extern int test;
+extern float heading_increment;
+extern float total_thresh;
+extern float diff_thresh;
+
+extern float oa_color_count_frac;
+extern float wa_color_count_frac;
+
+#endif // PAPARAZZI_MAV_EXERCISE_H
