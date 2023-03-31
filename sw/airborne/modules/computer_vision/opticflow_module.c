@@ -277,7 +277,7 @@ struct image_t *opticflow_module_calc(struct image_t *img, uint8_t camera_id)
   
     
   image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
-  //image_create(&cropped_img_gray, new_w, new_h, IMAGE_YUV422);
+  image_create(&cropped_img_gray, new_w, new_h, IMAGE_YUV422);
   image_create(&final_img, section_w, section_h*NUM_HOR_SEC, IMAGE_YUV422);
 
   crop_img(img, &cropped_img, w_change, h_change);
