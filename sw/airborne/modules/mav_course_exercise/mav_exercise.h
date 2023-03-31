@@ -33,7 +33,6 @@ extern int turn_cap;
 extern float out_of_bounds_dheading;
 extern int counter_threshold;
 extern int test;
-extern int rotate;
 extern float heading_increment;
 extern float total_thresh;
 extern float diff_thresh;
