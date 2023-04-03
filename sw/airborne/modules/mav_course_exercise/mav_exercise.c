@@ -112,8 +112,8 @@ float white_heading_increment = 20.f;  // heading increment when white obstacle 
 float color_heading_increment = 10.f;  // variable to store heading increment based on color detected [deg]
 int counter = 0;                       // counter for deciding navigation state change
 int counter_hold;                      // counter for hold state
-int counter_threshold = 20;            // counter threshold for test mode (going back and forth)
-int test = 0;                          // if the test mode is enabled
+int counter_threshold = 30;            // counter threshold for test mode (going back and forth)
+int test = 1;                          // if the test mode is enabled
 float turn_left = 0;                   // the confidence variable for turning left (turn variable)
 float turn_right = 0;                  // the confidence variable for turning right (turn variable)
 float rotate_90 = 0;                   // the confidence variable for turning 90 degrees (turn variable)
@@ -133,6 +133,23 @@ float flow_right_mav;             // stores the optical flow of the right sectio
 float total_thresh = 150;         // threshold value for psuedo divergence where the drone decides to turn around
 float diff_thresh = 100;          // theshold value for the optical flow difference between left and right sections
 float flow_noise_threshold = 300; // threshold for flow noise
+
+int dl_right = 0;
+int dl_left = 0;
+int dl_around = 0;
+int dl_global_counter = 0;
+
+int right_true = 0;
+int right_false = 0;
+
+int left_true = 0;
+int left_false = 0;
+
+int around_true = 0;
+int around_false = 0;
+
+
+
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
@@ -333,6 +350,118 @@ void mav_exercise_periodic(void)
     // test mode for developing algorithms
     if (test)
     {
+    
+
+      static int around_local = 0;
+      static int left_local = 0;
+      static int right_local = 0;
+
+      if(dl_global_counter < 40) {
+
+        moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
+        
+        if(counter < counter_threshold && moveDistance > 0) {
+
+          momentum_calc(psuedo_div, flow_difference, full_flow, left_is_smallest, right_is_smallest);
+
+          Bound(turn_left, 0, turn_cap);
+          Bound(turn_right, 0, turn_cap);
+          Bound(stay_center, 0, turn_cap);
+          Bound(rotate_90, 0, turn_cap);
+
+          // choose the maximum between the turns
+
+          turn = fmaxf(turn_left, turn_right);
+          turn = fmaxf(turn, rotate_90);
+
+
+          if (turn >= stay_center && turn >= turn_decision)
+          {
+            // PRINT("Obstacle Found\n\n");
+            // if turn confidence value equals turn_left
+            if (turn == turn_left)
+            {
+              left_local = 1;
+              PRINT("OBSTACLE DETECTED!! TURNING LEFT!!\n\n");
+            }
+            // if turn confidence value equals turn_right
+            else if (turn == turn_right)
+            {
+              right_local = 1;
+              PRINT("OBSTACLE DETECTED!! TURNING RIGHT!!\n\n");
+            }
+            // else the drone should turn around
+            else
+            {
+              around_local = 1;
+              PRINT("OBSTACLE DETECTED!! TURNING AROUND!!\n\n");
+            }
+
+            // Reset turn confidence variables to restart the cycle
+            turn_left = 0;
+            turn_right = 0;
+            stay_center = 0;
+            rotate_90 = 0;
+            turn = 0;
+
+          }
+        }
+        else if(counter > counter_threshold)
+        {
+          moveDistance = -moveDistance;
+          counter = 0;
+          turn_left -= 100;
+          turn_right -= 100;
+          stay_center -= 100;
+          rotate_90 -= 100;
+
+          if(dl_left){
+            left_true += left_local;
+            left_false += (right_local+around_local);
+          }
+
+          else if(dl_right){
+            right_true += right_local;
+            right_false += (left_local+around_local);
+            PRINT("RIGHT FALSE: %d\nGLOBAL UPDATED!!\n\n",right_false);
+          }
+          
+          else if(dl_around){
+            around_true += around_local;
+            around_false += (right_local+left_local);
+          }
+          dl_global_counter++;
+          left_local = 0;
+          right_local = 0;
+          around_local = 0;
+        }
+
+        counter++;
+
+      }
+      else if (dl_global_counter == 40){
+        PRINT("!!!!!!!!!!!!!!!!!!!!!!!GLOBAL COUNTER REACHED MAX!!!!!!!!!!!!!!!!!!!!!!!\n\n");
+
+        if(dl_left){
+          PRINT("left_true = %d\n\nleft_false = %d\n\n", left_true, left_false);
+        }
+
+        else if(dl_right){
+          PRINT("right_true = %d\n\nright_false = %d\n\n", right_true, right_false);
+        }
+          
+        else if(dl_around){
+          PRINT("around_true = %d\n\naround_false = %d\n\n", around_true, around_false);
+        }
+        else{
+          PRINT("!!!!!!!!!!!!!!!!!NO TURN DECISION SELECTED IN DL SETTINGS!!!!!!!!!!!!!!!!!\n\n");
+
+        }
+
+        dl_global_counter++;
+      }
+
+/* 
       PRINT("orange y: %d\n\n", orange_y);
       counter++;
       if (counter > counter_threshold)
@@ -353,52 +482,8 @@ void mav_exercise_periodic(void)
         stay_center -= 100;
         rotate_90 -= 100;
       }
-
-      moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
-
-      momentum_calc(psuedo_div, flow_difference, full_flow, left_is_smallest, right_is_smallest);
-
-      Bound(turn_left, 0, turn_cap);
-      Bound(turn_right, 0, turn_cap);
-      Bound(stay_center, 0, turn_cap);
-      Bound(rotate_90, 0, turn_cap);
-
-      // choose the maximum between the turns
-
-      turn = fmaxf(turn_left, turn_right);
-      turn = fmaxf(turn, rotate_90);
-
-      // PRINT("rotate90, turn_right, stay_center, turn_left: %f, %f, %f, %f \n", rotate_90, turn_right, stay_center, turn_left);
-      if (turn_left > turn_right)
-      {
-        // PRINT("turning left\n");
-      }
-      else if (turn_right > turn_left)
-      {
-        // PRINT("turning right\n");
-      }
-      else if (rotate_90 >= turn)
-      {
-        // PRINT("rotating 90\n");
-      }
-      else
-      {
-        // PRINT("staying center\n");
-      }
-
-      if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY), WaypointY(WP_TRAJECTORY)))
-      {
-        // PRINT("Out of Bounds\n\n");
-      }
-      else if (turn >= stay_center && turn >= turn_decision)
-      {
-        // PRINT("Obstacle Found\n\n");
-      }
-      else
-      {
-        //("SAFE\n\n");
-      }
-
+ */
+      
       // PRINT("       ------------------------------------------------\n\n\n");
       break;
     }
