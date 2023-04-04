@@ -419,11 +419,15 @@ void mav_exercise_periodic(void)
         if (dl_close)
         {
           PRINT("close_true = %d\n\nclose_false = %d\n\n", close_true, close_false);
+          close_true = 0;
+          close_false = 0;
         }
 
         else if (dl_far)
         {
           PRINT("far_true = %d\n\nfar_false = %d\n\n", far_true, far_false);
+          far_true = 0;
+          far_false = 0;
         }
         else
         {
