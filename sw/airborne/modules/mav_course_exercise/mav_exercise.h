@@ -40,11 +40,8 @@ extern float diff_thresh;
 extern float oa_color_count_frac;
 extern float wa_color_count_frac;
 
-extern int dl_right;
-extern int dl_left;
-extern int dl_around;
+extern int dl_close;
+extern int dl_far;
 extern int dl_global_counter;
-
-
 
 #endif // PAPARAZZI_MAV_EXERCISE_H

@@ -21,9 +21,8 @@
         <dl_setting var="heading_increment" min="0" step="1" max="180" shortname="turn angle"/>
         <dl_setting var="oa_color_count_frac" min="0.0" step="0.01" max="1.0" shortname="orange thresh"/>
         <dl_setting var="wa_color_count_frac" min="0.0" step="0.01" max="1.0" shortname="white thresh"/>
-        <dl_setting var="dl_right" min="0.0" step="1" max="1" shortname="detect right"/>
-        <dl_setting var="dl_left" min="0.0" step="1" max="1" shortname="detect left"/>
-        <dl_setting var="dl_around" min="0.0" step="1" max="1" shortname="detect around"/>
+        <dl_setting var="dl_close" min="0.0" step="1" max="1" shortname="detect close"/>
+        <dl_setting var="dl_far" min="0.0" step="1" max="1" shortname="detect far"/>
         <dl_setting var="dl_global_counter" min="0" step="2" max="49" shortname="global counter"/>
       </dl_settings>
     </dl_settings>

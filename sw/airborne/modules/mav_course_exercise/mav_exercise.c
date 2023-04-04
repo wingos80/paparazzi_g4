@@ -134,21 +134,15 @@ float total_thresh = 150;         // threshold value for psuedo divergence where
 float diff_thresh = 100;          // theshold value for the optical flow difference between left and right sections
 float flow_noise_threshold = 300; // threshold for flow noise
 
-int dl_right = 0;
-int dl_left = 0;
-int dl_around = 0;
+int dl_close = 0;
+int dl_far = 0;
 int dl_global_counter = 0;
 
-int right_true = 0;
-int right_false = 0;
+int close_true = 0;
+int close_false = 0;
 
-int left_true = 0;
-int left_false = 0;
-
-int around_true = 0;
-int around_false = 0;
-
-
+int far_true = 0;
+int far_false = 0;
 
 // needed to receive output from a separate module running on a parallel process
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -350,20 +344,21 @@ void mav_exercise_periodic(void)
     // test mode for developing algorithms
     if (test)
     {
-    
 
-      static int around_local = 0;
-      static int left_local = 0;
-      static int right_local = 0;
-
-      if(dl_global_counter < 40) {
+      static int yes_local = 0;
+      static int no_local = 1;
+      if (dl_global_counter < 40)
+      {
 
         moveWaypointForward(WP_GOAL, 2.0f * moveDistance);
-        
-        if(counter < counter_threshold && moveDistance > 0) {
 
-          momentum_calc(psuedo_div, flow_difference, full_flow, left_is_smallest, right_is_smallest);
+        if (counter < counter_threshold && moveDistance > 0)
+        {
 
+          if (counter > 4)
+          {
+            momentum_calc(psuedo_div, flow_difference, full_flow, left_is_smallest, right_is_smallest);
+          }
           Bound(turn_left, 0, turn_cap);
           Bound(turn_right, 0, turn_cap);
           Bound(stay_center, 0, turn_cap);
@@ -374,39 +369,20 @@ void mav_exercise_periodic(void)
           turn = fmaxf(turn_left, turn_right);
           turn = fmaxf(turn, rotate_90);
 
-
           if (turn >= stay_center && turn >= turn_decision)
           {
-            // PRINT("Obstacle Found\n\n");
-            // if turn confidence value equals turn_left
-            if (turn == turn_left)
-            {
-              left_local = 1;
-              PRINT("OBSTACLE DETECTED!! TURNING LEFT!!\n\n");
-            }
-            // if turn confidence value equals turn_right
-            else if (turn == turn_right)
-            {
-              right_local = 1;
-              PRINT("OBSTACLE DETECTED!! TURNING RIGHT!!\n\n");
-            }
-            // else the drone should turn around
-            else
-            {
-              around_local = 1;
-              PRINT("OBSTACLE DETECTED!! TURNING AROUND!!\n\n");
-            }
-
+            yes_local = 1;
+            no_local = 0;
+            PRINT("OBSTACLE DETECTED!! TURNING!!\n\n");
             // Reset turn confidence variables to restart the cycle
             turn_left = 0;
             turn_right = 0;
             stay_center = 0;
             rotate_90 = 0;
             turn = 0;
-
           }
         }
-        else if(counter > counter_threshold)
+        else if (counter > counter_threshold)
         {
           moveDistance = -moveDistance;
           counter = 0;
@@ -415,75 +391,71 @@ void mav_exercise_periodic(void)
           stay_center -= 100;
           rotate_90 -= 100;
 
-          if(dl_left){
-            left_true += left_local;
-            left_false += (right_local+around_local);
+          if (dl_close && moveDistance < 0)
+          {
+            close_true += yes_local;
+            close_false += no_local;
+            PRINT("CLOSE TRUE: %d; CLOSE FALSE: %d\nGLOBAL UPDATED!!\n\n", close_true, close_false);
           }
 
-          else if(dl_right){
-            right_true += right_local;
-            right_false += (left_local+around_local);
-            PRINT("RIGHT FALSE: %d\nGLOBAL UPDATED!!\n\n",right_false);
+          else if (dl_far && moveDistance < 0)
+          {
+            far_true += no_local;
+            far_false += yes_local;
+            PRINT("FAR TRUE: %d;FAR FALSE: %d\nGLOBAL UPDATED!!\n\n", far_true, far_false);
           }
-          
-          else if(dl_around){
-            around_true += around_local;
-            around_false += (right_local+left_local);
-          }
+
           dl_global_counter++;
-          left_local = 0;
-          right_local = 0;
-          around_local = 0;
+          yes_local = 0;
+          no_local = 1;
         }
 
         counter++;
-
       }
-      else if (dl_global_counter == 40){
+      else if (dl_global_counter == 40)
+      {
         PRINT("!!!!!!!!!!!!!!!!!!!!!!!GLOBAL COUNTER REACHED MAX!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 
-        if(dl_left){
-          PRINT("left_true = %d\n\nleft_false = %d\n\n", left_true, left_false);
+        if (dl_close)
+        {
+          PRINT("close_true = %d\n\nclose_false = %d\n\n", close_true, close_false);
         }
 
-        else if(dl_right){
-          PRINT("right_true = %d\n\nright_false = %d\n\n", right_true, right_false);
+        else if (dl_far)
+        {
+          PRINT("far_true = %d\n\nfar_false = %d\n\n", far_true, far_false);
         }
-          
-        else if(dl_around){
-          PRINT("around_true = %d\n\naround_false = %d\n\n", around_true, around_false);
+        else
+        {
+          PRINT("!!!!!!!!!!!!!!!!!NO OBSTACLE DECISION SELECTED IN DL SETTINGS!!!!!!!!!!!!!!!!!\n\n");
         }
-        else{
-          PRINT("!!!!!!!!!!!!!!!!!NO TURN DECISION SELECTED IN DL SETTINGS!!!!!!!!!!!!!!!!!\n\n");
-
-        }
-
+        counter = 0;
         dl_global_counter++;
       }
 
-/* 
-      PRINT("orange y: %d\n\n", orange_y);
-      counter++;
-      if (counter > counter_threshold)
-      {
-        // PRINT("\n\n\n\n\n\n\n\n")
-        // PRINT("         ***period change***\n");
-        moveDistance = -moveDistance;
-        counter = 0;
-        turn_left -= 100;
-        turn_right -= 100;
-        stay_center -= 100;
-        rotate_90 -= 100;
-      }
-      if (counter < 4)
-      {
-        turn_left -= 100;
-        turn_right -= 100;
-        stay_center -= 100;
-        rotate_90 -= 100;
-      }
- */
-      
+      /*
+            PRINT("orange y: %d\n\n", orange_y);
+            counter++;
+            if (counter > counter_threshold)
+            {
+              // PRINT("\n\n\n\n\n\n\n\n")
+              // PRINT("         ***period change***\n");
+              moveDistance = -moveDistance;
+              counter = 0;
+              turn_left -= 100;
+              turn_right -= 100;
+              stay_center -= 100;
+              rotate_90 -= 100;
+            }
+            if (counter < 4)
+            {
+              turn_left -= 100;
+              turn_right -= 100;
+              stay_center -= 100;
+              rotate_90 -= 100;
+            }
+       */
+
       // PRINT("       ------------------------------------------------\n\n\n");
       break;
     }
