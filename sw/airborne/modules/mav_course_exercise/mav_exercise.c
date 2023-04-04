@@ -20,18 +20,39 @@
 
 #include "mav_exercise.h"
 #include "modules/core/abi.h"
+#include "modules/orange_avoider/orange_avoider_guided.h"
 #include "firmwares/rotorcraft/navigation.h"
+#include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "state.h"
 #include "autopilot_static.h"
 #include <stdio.h>
+#include <time.h>
+#include <math.h> // not sure if including this library would cause errors
+// #include "modules/computer_vision/opticflow_module.h"
 
 #define NAV_C // needed to get the nav functions like Inside...
 #include "generated/flight_plan.h"
 
 #define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string, __FUNCTION__, ##__VA_ARGS__)
 
+/**
+ * Increments the heading of the drone
+ * @param[in] incrementDegrees: the amount by which the heading is increased (in degrees)
+ */
 uint8_t increase_nav_heading(float incrementDegrees);
+
+/**
+ * Moves given waypoint forward by certain distance
+ * @param[in] waypoint: the waypoint name/ID
+ * @param[in] distanceMeters: distance to move forward (in m)
+ */
 uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
+
+/**
+ * Moves given waypoint to a certain coordinate
+ * @param[in] waypoint: the waypoint name/ID
+ * @param[in] new_coor: address pointer to the struct that contains x,y,z coordinate
+ */
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 
 /**
@@ -48,9 +69,24 @@ float RotateCenterArena(void);
 enum navigation_state_t
 {
   SAFE,
+  COLOR_FOUND,
   OBSTACLE_FOUND,
-  OUT_OF_BOUNDS,
-  HOLD
+  TURN_LEFT,
+  TURN_RIGHT,
+  TURN_AROUND,
+  HOLD,
+  SEARCH_FOR_SAFE_HEADING,
+  COLOR_SEARCH_FOR_SAFE_HEADING,
+  OUT_OF_BOUNDS
+};
+
+/* *
+ * Enum created for the colors drone detects
+ */
+enum color_t
+{
+  ORANGE,
+  WHITE
 };
 
 // define and initialise global variables
@@ -127,7 +163,8 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
                             int32_t __attribute__((unused)) flow_y,
                             int32_t __attribute__((unused)) flow_der_x,
                             int32_t __attribute__((unused)) flow_der_y,
-                            float __attribute__((unused)) quality, float __attribute__((unused)) size_divergence,
+                            float __attribute__((unused)) quality,
+                            float __attribute__((unused)) size_divergence,
                             float flow_left,
                             float flow_center,
                             float flow_right)
@@ -412,6 +449,7 @@ void mav_exercise_periodic(void)
       }
     }
     break;
+
   case COLOR_FOUND:
     PRINT("STATE: COLOR_FOUND-- %d (0=orange)\n\n", color);
     // stop the drone
@@ -623,6 +661,9 @@ void mav_exercise_periodic(void)
   default:
     break;
   }
+
+  // end of state machine and periodic function
+  return;
 }
 
 /*
@@ -677,7 +718,6 @@ uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters)
 /*
  * Sets the variable 'heading_increment' randomly positive/negative
  */
-
 uint8_t chooseRandomIncrementAvoidance(void)
 {
   // Randomly choose CW or CCW avoiding direction

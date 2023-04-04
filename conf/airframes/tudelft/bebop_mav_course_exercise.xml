@@ -17,6 +17,17 @@
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX1" value="140"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="160"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="225"/>
+
+
+      <!-- Detect white -->
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="145"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="105"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="180"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="105"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="150"/>
+ 
+
     </target>
     <target name="nps" board="pc">
       <module name="fdm" type="gazebo"/>
@@ -30,6 +41,16 @@
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX1" value="121"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="134"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
+
+    <!-- Detect white -->
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="160"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX2" value="255"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MIN2" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX2" value="160"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN2" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX2" value="160"/>
+ 
+
     </target>
     
     <define name="ARRIVED_AT_WAYPOINT" value="0.5"/><!-- Detect arrival at waypoint when within 0.5m -->
@@ -50,9 +71,10 @@
     <module name="ins" type="extended"/>
 
     <module name="logger_file"/>
-    <module name="mav_course_exercise"/>
+    <!-- <module name="obstacle_avoidance"/> -->
     <!-- Video/Camera modules -->
     <module name="bebop_cam"/>
+    <module name="mav_course_exercise"/>
     <!--module name="bebop_ae_awb">
       <define name="CV_AE_AWB_AV" value="1" />
       <define name="CV_AE_AWB_VERBOSE" value="0" />

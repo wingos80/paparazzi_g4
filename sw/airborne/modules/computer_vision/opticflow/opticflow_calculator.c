@@ -45,7 +45,7 @@
 #include "size_divergence.h"
 #include "linear_flow_fit.h"
 #include "modules/sonar/agl_dist.h"
-
+#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 // to get the definition of front_camera / bottom_camera
 #include BOARD_CONFIG
 
@@ -365,11 +365,11 @@ PRINT_CONFIG_VAR(OPTICFLOW_TRACK_BACK_CAMERA2)
 // Whether to draw the flow on the image:
 // False by default, since it changes the image and costs time.
 #ifndef OPTICFLOW_SHOW_FLOW
-#define OPTICFLOW_SHOW_FLOW FALSE
+#define OPTICFLOW_SHOW_FLOW TRUE
 #endif
 
 #ifndef OPTICFLOW_SHOW_FLOW_CAMERA2
-#define OPTICFLOW_SHOW_FLOW_CAMERA2 FALSE
+#define OPTICFLOW_SHOW_FLOW_CAMERA2 TRUE
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_SHOW_FLOW)
 PRINT_CONFIG_VAR(OPTICFLOW_SHOW_FLOW_CAMERA2)
@@ -481,6 +481,58 @@ void opticflow_calc_init(struct opticflow_t opticflow[])
   float_rmat_of_eulers(&body_to_cam[1], &euler_cam2);
 #endif
 }
+
+void opticflow_calc_init_mav(struct opticflow_t opticflow[], int num_sec)
+{
+  //printf("address opticflow_mav for index %d: %p/n/n", index, opticflow);
+  /* Set the default values */
+  for (int idx = 0; idx < num_sec; idx++) {
+    opticflow[idx].method = OPTICFLOW_METHOD; //0 = LK_fast9, 1 = Edgeflow
+    opticflow[idx].window_size = OPTICFLOW_WINDOW_SIZE;
+    opticflow[idx].search_distance = OPTICFLOW_SEARCH_DISTANCE;
+    opticflow[idx].derotation = OPTICFLOW_DEROTATION; //0 = OFF, 1 = ON
+    opticflow[idx].derotation_correction_factor_x = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X;
+    opticflow[idx].derotation_correction_factor_y = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_Y;
+    opticflow[idx].track_back = OPTICFLOW_TRACK_BACK;
+    opticflow[idx].show_flow = OPTICFLOW_SHOW_FLOW;
+    opticflow[idx].max_track_corners = OPTICFLOW_MAX_TRACK_CORNERS;
+    opticflow[idx].subpixel_factor = OPTICFLOW_SUBPIXEL_FACTOR;
+    if (opticflow[idx].subpixel_factor == 0) {
+      opticflow[idx].subpixel_factor = 10;
+    }
+    opticflow[idx].resolution_factor = OPTICFLOW_RESOLUTION_FACTOR;
+    opticflow[idx].max_iterations = OPTICFLOW_MAX_ITERATIONS;
+    opticflow[idx].threshold_vec = OPTICFLOW_THRESHOLD_VEC;
+    opticflow[idx].pyramid_level = OPTICFLOW_PYRAMID_LEVEL;
+    opticflow[idx].median_filter = OPTICFLOW_MEDIAN_FILTER;
+    opticflow[idx].feature_management = OPTICFLOW_FEATURE_MANAGEMENT;
+    opticflow[idx].fast9_region_detect = OPTICFLOW_FAST9_REGION_DETECT;
+    opticflow[idx].fast9_num_regions = OPTICFLOW_FAST9_NUM_REGIONS;
+
+    opticflow[idx].fast9_adaptive = OPTICFLOW_FAST9_ADAPTIVE;
+    opticflow[idx].fast9_threshold = OPTICFLOW_FAST9_THRESHOLD;
+    opticflow[idx].fast9_min_distance = OPTICFLOW_FAST9_MIN_DISTANCE;
+    opticflow[idx].fast9_padding = OPTICFLOW_FAST9_PADDING;
+    opticflow[idx].fast9_rsize = FAST9_MAX_CORNERS;
+    opticflow[idx].fast9_ret_corners = calloc(opticflow[0].fast9_rsize, sizeof(struct point_t));
+
+    opticflow[idx].corner_method = OPTICFLOW_CORNER_METHOD;
+    opticflow[idx].actfast_long_step = OPTICFLOW_ACTFAST_LONG_STEP;
+    opticflow[idx].actfast_short_step = OPTICFLOW_ACTFAST_SHORT_STEP;
+    opticflow[idx].actfast_min_gradient = OPTICFLOW_ACTFAST_MIN_GRADIENT;
+    opticflow[idx].actfast_gradient_method = OPTICFLOW_ACTFAST_GRADIENT_METHOD;
+
+    opticflow[idx].camera = &OPTICFLOW_CAMERA;
+    opticflow[idx].id = idx;
+  }
+  struct FloatEulers euler_cam1 = {OPTICFLOW_BODY_TO_CAM_PHI, OPTICFLOW_BODY_TO_CAM_THETA, OPTICFLOW_BODY_TO_CAM_PSI};
+  float_rmat_of_eulers(&body_to_cam[0], &euler_cam1);
+}
+
+
+
+
+
 /**
  * Run the optical flow with fast9 and lukaskanade on a new image frame
  * @param[in] *opticflow The opticalflow structure that keeps track of previous images
@@ -492,6 +544,7 @@ void opticflow_calc_init(struct opticflow_t opticflow[])
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
                              struct opticflow_result_t *result)
 {
+  //opticflow->max_track_corners = 2;
   if (opticflow->just_switched_method) {
     // Create the image buffers
     image_create(&opticflow->img_gray, img->w, img->h, IMAGE_GRAYSCALE);
@@ -520,9 +573,12 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
 
   // Update FPS for information
   float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
+  // PRINT("frame time : %f\n", dt);
+  // PRINT("INDEX: %d", index);
   if (dt > 1e-5) {
     result->fps = 1000.f / dt;
   } else {
+    // PRINT("FAILED AT FRAME TIME\n");
     return false;
   }
 
@@ -593,7 +649,8 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->div_size = 0;
     result->divergence = 0;
     result->noise_measurement = 5.0;
-
+    
+    // PRINT("FAILED AT CORNER CNT\n");
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
     return false;
   }
@@ -654,7 +711,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
   }
 
   if (opticflow->show_flow) {
-    uint8_t color[4] = {0, 0, 0, 0};
+    uint8_t color[4] = {0, 1, 0, 0};
     uint8_t bad_color[4] = {0, 0, 0, 0};
     image_show_flow_color(img, vectors, result->tracked_cnt, opticflow->subpixel_factor, color, bad_color);
   }
@@ -695,6 +752,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     result->flow_y = 0;
 
     free(vectors);
+    // PRINT("FAILED AT TRACKED CNT\n");
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
     return false;
   } else if (result->tracked_cnt % 2) {
@@ -811,6 +869,8 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
     }
   }
   free(vectors);
+  
+    
   image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
   return true;
 }
@@ -1164,15 +1224,21 @@ bool calc_edgeflow_tot(struct opticflow_t *opticflow, struct image_t *img,
  * @param[in] *opticflow The opticalflow structure that keeps track of previous images
  * @param[in] *state The state of the drone
  * @param[in] *img The image frame to calculate the optical flow from
+ * @param[in] *index index of the sectioned *img (...)
  * @param[out] *result The optical flow result
  */
 bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
-                          struct opticflow_result_t *result)
+                          struct opticflow_result_t *result, int num_sec)
 {
   bool flow_successful = false;
   // A switch counter that checks in the loop if the current method is similar,
   // to the previous (for reinitializing structs)
-  static int8_t switch_counter[2] = {-1, -1};
+  static int8_t switch_counter[5] = {-1,-1,-1,-1,-1};
+  // for (int j=0; j< num_sec; j++) {
+  //   switch_counter[j] = -1;
+  // }
+
+
   if (switch_counter[opticflow->id] != opticflow->method) {
     opticflow->just_switched_method = true;
     switch_counter[opticflow->id] = opticflow->method;

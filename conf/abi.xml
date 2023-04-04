@@ -61,6 +61,9 @@
       <field name="flow_der_y" type="int32_t">The derotated flow calculation in the y direction (in subpixels)</field>
       <field name="quality" type="float"/>
       <field name="size_divergence" type="float">Divergence as determined with the size method (in 1/seconds) with LK, and Divergence (1/seconds) itself with EF</field>
+      <field name="flow_left" type="float">flow on the left part image as calculated by opticflow</field>
+      <field name="flow_center" type="float">flow on the center part image as calculated by opticflow</field>    
+      <field name="flow_right" type="float">flow on the right part image as calculated by opticflow</field> 
     </message>
 
     <message name="VELOCITY_ESTIMATE" id="12">
@@ -181,12 +184,12 @@
     </message>
 
     <message name="VISUAL_DETECTION" id="27">
-      <field name="pixel_x"      type="int16_t">Center pixel X</field>
-      <field name="pixel_y"      type="int16_t">Center pixel Y</field>
-      <field name="pixel_width"  type="int16_t">Width in pixels</field>
-      <field name="pixel_height" type="int16_t">Height in pixels</field>
-      <field name="quality"      type="int32_t">Detection quality</field>
-      <field name="extra"        type="int16_t">Extra field for options like detector source etc</field>
+      <field name="pixel_x1"      type="int16_t">Center pixel X1</field>
+      <field name="pixel_y1"      type="int16_t">Center pixel Y1</field>
+      <field name="pixel_x2"  type="int16_t">Center pixel X2</field>
+      <field name="pixel_y2"  type="int16_t">Center pixel Y2</field>
+      <field name="quality1"      type="int32_t">Detection quality 1</field>
+      <field name="quality2"        type="int32_t">Detection quality 2</field>
     </message>
 
     <message name="JOYSTICK" id="28">

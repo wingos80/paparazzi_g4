@@ -24,9 +24,6 @@
       </dl_settings>
     </dl_settings>
   </settings>
-  
-
-
   <dep>
     <depends>cv_detect_color_object</depends>
   </dep>
@@ -35,7 +32,7 @@
     <file name="mav_exercise.h"/>
   </header>
   <init fun="mav_exercise_init()"/>
-  <periodic fun="mav_exercise_periodic()" freq="4"/>
+  <periodic fun="mav_exercise_periodic()" freq="10"/>
   <makefile target="ap|nps">
     <file name="mav_exercise.c"/>
   </makefile>

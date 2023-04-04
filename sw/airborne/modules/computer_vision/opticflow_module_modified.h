@@ -27,22 +27,12 @@
 #ifndef OPTICFLOW_MODULE_H
 #define OPTICFLOW_MODULE_H
 
-
-
 // Include opticflow calculator
 #include "opticflow/opticflow_calculator.h"
 
+
 // Needed for settings
 extern struct opticflow_t opticflow[];
-//static float flow_y_test[3]; 
-//extern struct opticflow_t opticflow_mav[][ACTIVE_CAMERAS];
-extern struct opticflow_t opticflow_l[];
-extern struct opticflow_t opticflow_c[];
-extern struct opticflow_t opticflow_r[];
-extern float constt;
-extern float gradi;
-// extern float total_thresh;
-// extern float diff_thresh;
 
 // Module functions
 extern void opticflow_module_init(void);

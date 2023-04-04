@@ -30,6 +30,7 @@
 
 #include "modules/computer_vision/video_capture.h"
 #include "modules/computer_vision/cv.h"
+#include "lib/vision/image.h"
 
 #include "lib/encoding/jpeg.h"
 
@@ -37,6 +38,14 @@
 // and exposes functions to write data in the image exif headers.
 #if JPEG_WITH_EXIF_HEADER
 #include "lib/exif/exif_module.h"
+#endif
+
+// #ifndef NUM_VER_SEC
+// #define NUM_VER_SEC 3     ///< Number of vertical sections on image to calculate optical flow
+// #endif
+
+#ifndef NUM_HOR_SEC
+#define NUM_HOR_SEC 3     ///< Number of horizontal sections on image to calculate optical flow
 #endif
 
 #ifndef VIDEO_CAPTURE_PATH
@@ -63,6 +72,7 @@ static char save_dir[256];
 // Forward function declarations
 struct image_t *video_capture_func(struct image_t *img, uint8_t camera_id);
 void video_capture_save(struct image_t *img);
+
 
 
 void video_capture_init(void)
@@ -129,6 +139,42 @@ void video_capture_save(struct image_t *img)
   // Generate image filename from image timestamp
   sprintf(save_name, "%s/%u.jpg", save_dir, img->pprz_ts);
   printf("[video_capture] Saving image to %s.\n", save_name);
+
+
+  // // crop the image first - take away 120 pixels from the width and 170 pixels from the heigh
+  // int w_change = 120;
+  // int h_change = 170;
+  // uint16_t new_w = img->w - w_change;
+  // uint16_t new_h = img->h - h_change;
+  // int section_h = new_h/NUM_HOR_SEC; 
+  // int section_w = new_w; 
+
+
+  // struct image_t final_img;
+  // struct image_t cropped_img;
+  // struct image_t img_jpeg;
+  // struct image_t sections_img_p[NUM_HOR_SEC];
+  
+
+  // image_create(&final_img, section_w, section_h*NUM_HOR_SEC, IMAGE_YUV422);
+  // image_create(&cropped_img, new_w, new_h, IMAGE_YUV422);
+  // image_create(&img_jpeg, section_w, section_h*NUM_HOR_SEC, IMAGE_JPEG);
+
+
+  // crop_img(img, &cropped_img);
+
+  
+  // for (int j=0;j<NUM_HOR_SEC;j++) {
+  //   int index = j;
+  //   image_create(&sections_img_p[index], section_w, section_h, IMAGE_YUV422);
+  //   sections_img_f(&cropped_img, &sections_img_p[index], section_w, section_h, j, 1);
+  //   sections_img_f(&sections_img_p[index], &final_img, section_w, section_h, j, 0);
+  // }
+
+  // //jpeg_encode_image(&sections_img_p[0], &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
+  // jpeg_encode_image(&final_img, &img_jpeg, VIDEO_CAPTURE_JPEG_QUALITY, true);
+
+
 
   // Create jpg image from raw frame
   struct image_t img_jpeg;

@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "tuple": "c",
+        "undistortion.h": "c",
+        "image.h": "c"
+    }
+}

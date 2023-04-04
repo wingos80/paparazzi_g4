@@ -33,6 +33,8 @@
 #define CACHE_LINE_LENGTH 64
 #endif
 
+
+//#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 /**
  * Create a new image
  * @param[out] *img The output image
@@ -154,6 +156,253 @@ void image_to_grayscale(struct image_t *input, struct image_t *output)
     for (int y = 0; y < height * width; y++) {
         *dest++ = *source++;    // Y
         source++;
+    }
+  }
+}
+
+/**
+ * Convert an image to grayscale.
+ * Depending on the output type the U/V bytes are removed
+ * @param[in] *input The input image (Needs to be YUV422)
+ * @param[out] *output The output image
+ */
+void crop_img(struct image_t *input, struct image_t *output, int w_change, int h_change)
+{  
+  // take away 120 pixels from the width and 170 pixels from the heigh
+  uint16_t new_w = input->w - w_change;
+  uint16_t new_h = input->h - h_change;
+
+
+  uint8_t *source = input->buf;
+  uint8_t *dest = output->buf;
+  // Crop the image whilst fixing the center
+  source += 2*(h_change/2*input->w + w_change/2);
+
+  // Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+  output->eulers = input->eulers;
+  output->pprz_ts = input->pprz_ts;
+
+  // Copy the pixels
+  if (output->type == IMAGE_YUV422) {
+    for (int y = 0; y < new_h; y++) {
+      for (int x = 0; x < new_w; x++) {
+        *dest++ = *source;  // U / V
+        source++;
+        *dest++ = *source;    // Y
+        source++;
+      }
+      source += 2*w_change;
+    }
+  } else {
+    //PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    for (int y = 0; y < new_h * new_w; y++) {
+        *dest++ = *source++;    // Y
+        source++;
+    }
+  }
+}
+
+void divide_img(struct image_t *input, struct image_t *output, int section_w, int section_h, int j)
+{ 
+  int y1_pixels, y2_pixels;
+
+  uint8_t *source = input->buf;
+  uint8_t *dest = output->buf;
+
+  //Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+  output->eulers = input->eulers;
+  output->pprz_ts = input->pprz_ts;
+
+  y1_pixels = j*section_h;
+  y2_pixels = (j+1)*section_h-1;
+  // int row_skip = 2;
+  source += 2*(y1_pixels*section_w);
+  
+  //Copy the pixels
+  if (output->type == IMAGE_YUV422) {
+    for (int y = 0; y < section_h; y++) {
+      for (int x = 0; x < section_w; x++) {
+        *dest = *source;  // U / V
+        source++;
+        dest++;
+        *dest = *source;    // Y
+        source++;
+        dest++;
+      }
+      // source += row_skip;
+    }
+  } else {
+    //PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    for (int y = 0; y < section_h * section_w; y++) {
+        *dest++ = *source++;    // Y
+        source++;
+    }        
+  }
+}
+
+
+void glue_img(struct image_t *input, struct image_t *output, int section_w, int section_h, int j)
+{ 
+  int y1_pixels, y2_pixels;
+
+  uint8_t *source = input->buf;
+  uint8_t *dest = output->buf;
+
+  //Copy the creation timestamp (stays the same)
+  output->ts = input->ts;
+  output->eulers = input->eulers;
+  output->pprz_ts = input->pprz_ts;
+
+  y1_pixels = j*section_h;
+  y2_pixels = (j+1)*section_h-1;
+  
+  int skip = 2*(y1_pixels*section_w);
+  dest += skip;
+    
+  //Copy the pixels
+  if (output->type == IMAGE_YUV422) {
+    for (int y = 0; y < section_h; y++) {
+      for (int x = 0; x < section_w; x++) {
+        *dest = *source;  // U / V
+        source++;
+        dest++;
+        *dest = *source;    // Y
+        source++;
+        dest++;
+      }
+      // source += row_skip;
+    }
+  } else {
+    //PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+    for (int y = 0; y < section_h * section_w; y++) {
+        *dest++ = *source++;    // Y
+        source++;
+    }        
+  }
+}
+
+// void glue_subparts(struct image_t *input, struct image_t *output, int section_w, int section_h, int j)
+// { 
+//   int y1_pixels, y2_pixels;
+
+//   uint8_t *source = input->buf;
+//   uint8_t *dest = output->buf;
+
+//   //Copy the creation timestamp (stays the same)
+//   output->ts = input->ts;
+//   output->eulers = input->eulers;
+//   output->pprz_ts = input->pprz_ts;
+
+//   y1_pixels = j*section_h;
+//   y2_pixels = (j+1)*section_h-1;
+  
+//   int skip = 2*(y1_pixels*section_w);
+//   dest += skip;
+    
+//   //Copy the pixels
+//   if (output->type == IMAGE_YUV422) {
+//     for (int y = 0; y < section_h; y++) {
+//       for (int x = 0; x < section_w; x++) {
+//         *dest = *source;  // U / V
+//         source++;
+//         dest++;
+//         *dest = *source;    // Y
+//         source++;
+//         dest++;
+//       }
+//       // source += row_skip;
+//     }
+//   } else {
+//     PRINT("\n\n\n\n\nPANIC, WRONG IMAGE TYPE FED TO CROP_IMG!!!!!!!!\n\n\n\n\n");
+//     for (int y = 0; y < section_h * section_w; y++) {
+//         *dest++ = *source++;    // Y
+//         source++;
+//     }        
+//   }
+// }
+
+void div_coloring(struct image_t *input, float val)
+{
+  uint8_t *source = input->buf;
+
+  float YUV_blue[3] = {29.0, 255.0, 107.0};
+  float YUV_white[3] = {255.0, 128.0, 128.0};
+  float YUV_red[3] = {76.0, 84.0, 255.0};
+  float YUV_green[3] = {171.0, 60.0, 72.0};
+  float YUV_out[3] = {0.0, 0.0, 0.0};
+  float delta_b2w[3] = {0.0, 0.0, 0.0};
+  float delta_w2r[3] = {0.0, 0.0, 0.0};  
+
+  // val = (val+1500.0)/3000.0;
+  // for(int i=0; i<3; i++) {
+  //     delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
+  //     delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
+  // }
+
+
+  // if (val == 0.0){
+  //   for(int i=0; i<3; i++) {  
+  //     YUV_out[i] = YUV_blue[i];
+  //   }
+  // } else if(val == 0.5){
+  //   for(int i=0; i<3; i++) {  
+  //     YUV_out[i] = YUV_white[i];
+  //   }
+  // } else if(val == 1.0){
+  //   for(int i=0; i<3; i++) {  
+  //     YUV_out[i] = YUV_red[i];
+  //   }
+  // } else{
+  //   for(int i=0; i<3; i++) {  
+  //     YUV_out[i] = YUV_green[i];
+  //   }
+  // }
+
+  //val = (val+1500.0)/3000.0;
+  for(int i=0; i<3; i++) {    
+      delta_b2w[i] = 2*(YUV_white[i] - YUV_blue[i]);
+      delta_w2r[i] = 2*(YUV_red[i] - YUV_white[i]);
+  }
+
+  if (val == 1.5) {
+    for(int i=0; i<3; i++) {  
+          YUV_out[i] = YUV_green[i];
+      }
+  }
+  else if (val < -1) {
+      YUV_out[0] = 29.0;
+      YUV_out[0] = 255.0;
+      YUV_out[0] = 107.0;
+  }
+  else if (val <= 0.5) {
+      for(int i=0; i<3; i++) {  
+          YUV_out[i] = YUV_blue[i] + (val * delta_b2w[i]);
+      }
+  }
+  else{
+      float val_temp = val - 0.5;
+      for(int i=0; i<3; i++) {  
+          YUV_out[i] = YUV_white[i] + (val_temp * delta_w2r[i]);
+      }
+  }
+
+  uint8_t U = YUV_out[1];
+  uint8_t V = YUV_out[2];
+
+
+  // Go trough all the pixels
+  for (uint16_t y = 0; y < input->h; y++) {
+    for (uint16_t x = 0; x < input->w; x += 2) {
+      // Check if the color is inside the specified values
+      *source = U;
+      source+=2;
+      *source = V;
+      source+=2;
+
+      // // Go to the next 2 pixels
+      // source += 4;
     }
   }
 }
@@ -357,6 +606,7 @@ void image_yuv422_downsample(struct image_t *input, struct image_t *output, uint
     source += pixelskip * input->w;
   }
 }
+
 
 /**
  * This function adds padding to input image by mirroring the edge image elements.

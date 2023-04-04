@@ -9,7 +9,18 @@
         "editor.tabSize": 4,
     },
     "files.associations": {
-        "Makefile.*": "makefile"
+        "Makefile.*": "makefile",
+        "variant": "c",
+        "alignedvector3": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "jpeg.h": "c",
+        "cstdlib": "c",
+        "opticflow_calculator.h": "c",
+        "cmath": "c",
+        "complex": "c",
+        "type_traits": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "esbonio.sphinx.confDir": "",

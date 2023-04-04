@@ -87,7 +87,7 @@ struct opticflow_t {
 
 extern void opticflow_calc_init(struct opticflow_t opticflow[]);
 extern bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
-                          struct opticflow_result_t *result);
+                          struct opticflow_result_t *result, int num_sec);
 
 extern bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
                              struct opticflow_result_t *result);
@@ -97,6 +97,6 @@ extern bool calc_edgeflow_tot(struct opticflow_t *opticflow, struct image_t *img
 extern void kalman_filter_opticflow_velocity(float *velocity_x, float *velocity_y, float *acceleration_measurement, float fps,
                                       float *measurement_noise, float process_noise, bool reinitialize_kalman);
 
+extern void opticflow_calc_init_mav(struct opticflow_t opticflow[], int num_sec);
 #endif /* OPTICFLOW_CALCULATOR_H */
-
 
